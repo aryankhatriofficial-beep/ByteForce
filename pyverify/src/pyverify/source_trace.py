@@ -500,7 +500,7 @@ async def _trace_from_verified(
                 max_member_size=max_member_size,
                 max_uncompressed_size=max_uncompressed_size,
             )
-        except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
+        except (OSError, RuntimeError, TimeoutError, asyncio.TimeoutError, ValueError) as exc:
             source_inventory = {
                 "status": "SOURCE_INVENTORY_INCOMPLETE",
                 "complete": False,
