@@ -2,11 +2,15 @@
 
 import hashlib
 import tarfile
-import tomllib
 from email import policy
 from email.parser import BytesParser
 from pathlib import Path
 from typing import Any
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 
 from pyverify.inventory import _normalized_path, _limit_is_valid
 

@@ -7,7 +7,10 @@ name = "pyverify"
 version = "0.1.0"
 description = "Python package integrity verification tools"
 requires-python = ">=3.10"
-dependencies = ["pypi-attestations==0.0.30"]
+dependencies = [
+    "pypi-attestations==0.0.30",
+    "tomli>=2; python_version < '3.11'",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
