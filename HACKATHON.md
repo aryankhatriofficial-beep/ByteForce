@@ -16,18 +16,9 @@
 
 **PS04 — Published Package Integrity**
 
- 3. Selected Open-Weight AI Model
+## 3. AI / Model Disclosure
 
-**Model:** Google Gemma 4 E4B Instruct
-
-**Runtime:** Ollama (Local Inference)
-
-4. Why We Selected This Model
-
-We selected Gemma 4 E4B Instruct because it offers a practical balance between model capability and local hardware requirements.
-
-Compared with larger model variants, E4B is a more practical choice for running locally on our MacBook hardware during the hackathon.
-
-Local inference also allows us to analyze isolated package differences without sending inspected code snippets to an external model API.
-
-
+- **Runtime AI model:** None. PyVerify currently uses deterministic verification and does not call an LLM or perform Ollama inference.
+- **Selected open-weight model:** Gemma 4 E4B Instruct was considered during planning but is not integrated or used in this implementation.
+- **AI coding assistant:** OpenAI Codex.
+- **Planning, research and review assistance:** ChatGPT (GPT-6).
