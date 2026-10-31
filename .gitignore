@@ -1,0 +1,16 @@
+# Python virtual environments and generated caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.tox/
+
+# Generated Python package metadata and build outputs
+*.egg-info/
+build/
+dist/
+
+# Downloaded wheel artifacts
+*.whl
+*.tar.gz
