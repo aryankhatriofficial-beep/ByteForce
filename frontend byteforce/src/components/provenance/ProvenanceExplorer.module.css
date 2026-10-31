@@ -1,0 +1,21 @@
+.journey { display: flex; flex-direction: column; gap: var(--s-5); padding-top: var(--s-5); min-height: calc(100vh - var(--nav-h)); }
+.svgWrap { width: 100%; overflow-x: auto; }
+.svg { width: 100%; min-width: 760px; height: auto; overflow: visible; }
+.node { --c: var(--steel-300); transition: opacity 0.3s; }
+.node[data-status="pass"] { --c: var(--mint); } .node[data-status="warn"] { --c: var(--amber); } .node[data-status="fail"] { --c: var(--red); }
+.node[data-status="not_checked"] .shape { stroke-dasharray: 1 6; stroke-linecap: round; } .node[data-status="not_configured"] { --c: var(--uv-300); } .node[data-status="not_configured"] .shape { stroke-dasharray: 5 4; }
+.halo { fill: color-mix(in oklab, var(--c) 10%, transparent); stroke: none; transition: fill 0.3s; }
+.node[data-active="true"] .halo { fill: color-mix(in oklab, var(--c) 28%, transparent); }
+.shape { fill: var(--void); stroke: var(--c); stroke-width: 2.5; }
+.node[data-status="unavailable"] .shape { stroke-dasharray: 4 4; }
+.label { fill: var(--ice); font-family: var(--font-body); font-size: 14px; font-weight: 600; }
+.sub { fill: var(--c); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; }
+.steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--s-2); }
+.step { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: var(--s-3); border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ice-dim); text-align: left; font-size: var(--fs-sm); transition: border-color 0.2s, background 0.2s; }
+.step[aria-selected="true"] { border-color: var(--uv-400); background: color-mix(in oklab, var(--uv-600) 18%, transparent); color: var(--ice); }
+.detail { display: flex; flex-direction: column; gap: var(--s-3); max-width: 880px; }
+.facts { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s-3); }
+.facts dt { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--steel-300); }
+.facts dd { margin: 4px 0 0; font-size: var(--fs-sm); }
+.break { color: var(--amber); font-size: var(--fs-sm); border-left: 2px solid var(--amber); padding-left: var(--s-3); }
+@media (max-width: 899px) { .journey { min-height: 0; } .steps { grid-template-columns: 1fr; } }

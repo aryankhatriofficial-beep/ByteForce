@@ -1,0 +1,17 @@
+.box {
+  --c: var(--steel-300);
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s-3);
+  padding: var(--s-8) var(--s-5); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--navy-950) 60%, transparent);
+}
+.box[data-kind="error"] { --c: var(--red); border-style: solid; border-color: color-mix(in oklab, var(--red) 40%, transparent); }
+.icon { width: 48px; height: 48px; color: var(--c); }
+.title { font-size: var(--fs-lg); font-stretch: 100%; }
+.body { color: var(--ice-dim); max-width: 52ch; font-size: var(--fs-sm); }
+.skel { display: flex; flex-direction: column; gap: var(--s-3); }
+.loading { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-5); }
+.orbit { position: relative; width: 28px; height: 28px; animation: spin 1.6s linear infinite; }
+.orbit i { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--uv-400); top: 0; left: 10px; }
+.orbit i:nth-child(2) { top: 18px; left: 1px; background: var(--plasma); }
+.orbit i:nth-child(3) { top: 18px; left: 19px; background: var(--mint); }
+@keyframes spin { to { transform: rotate(360deg); } }

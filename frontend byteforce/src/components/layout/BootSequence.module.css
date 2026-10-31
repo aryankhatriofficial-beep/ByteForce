@@ -1,0 +1,20 @@
+.boot {
+  position: fixed; inset: 0; z-index: 500; background: radial-gradient(60% 50% at 50% 50%, #0b0b24 0%, var(--void) 70%);
+  display: grid; place-items: center; clip-path: inset(0 0 0 0);
+  /* JS-independent fallback: never cover the site for more than 2.4 s. */
+  animation: bootFallback 0.3s ease 2.4s forwards;
+}
+@keyframes bootFallback { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+.grid { position: absolute; inset: 0; pointer-events: none; }
+.gridLine { position: absolute; left: 10%; right: 10%; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--steel-400) 50%, transparent), transparent); transform-origin: 50% 50%; }
+.center { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s-4); }
+.hex { width: clamp(96px, 14vw, 150px); height: auto; overflow: visible; filter: drop-shadow(0 0 24px color-mix(in oklab, var(--uv-500) 55%, transparent)); }
+.word { font-family: var(--font-display); font-weight: 700; font-stretch: 120%; font-size: clamp(1.6rem, 3vw, 2.4rem); color: var(--ice); opacity: 0; }
+.beamTrack { position: absolute; left: 0; right: 0; top: 50%; height: 2px; overflow: hidden; pointer-events: none; }
+.beam { position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, var(--uv-400) 40%, #fff 50%, var(--plasma) 58%, transparent 100%); box-shadow: 0 0 24px 4px color-mix(in oklab, var(--uv-500) 60%, transparent); transform: translateX(-110%); }
+.spine { position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%); display: flex; gap: clamp(0.8rem, 3vw, 2.6rem); margin: 0; padding: 0; list-style: none; font-size: var(--fs-xs); color: var(--steel-300); white-space: nowrap; }
+.spine li { opacity: 0; position: relative; padding-top: 14px; }
+.spine li::before { content: ""; position: absolute; top: 0; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; border: 1px solid var(--uv-300); }
+.skip { position: absolute; right: var(--s-5); bottom: var(--s-5); min-height: 40px; padding: 0 var(--s-4); border-radius: var(--r-md); border: 1px solid var(--line-strong); background: transparent; color: var(--ice-dim); font-size: var(--fs-xs); }
+.skip:hover { color: var(--ice); border-color: var(--uv-400); }
+@media (max-width: 560px) { .spine { gap: 0.6rem; font-size: 11px; } }

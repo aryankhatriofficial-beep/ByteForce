@@ -1,0 +1,14 @@
+.viewport { position: relative; overflow: hidden; padding: var(--s-4) 0; mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+.track { position: relative; list-style: none; margin: 0; padding: 0; height: 96px; touch-action: pan-y; }
+.line { position: absolute; left: 0; right: 0; top: 22px; height: 1px; background: linear-gradient(90deg, transparent, var(--line-strong) 5%, var(--line-strong) 95%, transparent); }
+.node { position: absolute; top: 0; transform: translateX(-50%); }
+.node button { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0; padding: 8px; border-radius: var(--radius-sm); color: var(--steel-300); }
+.node button:hover { color: var(--ice); }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--steel-400); background: var(--void); transition: transform 0.4s var(--ease-out), border-color 0.3s, box-shadow 0.3s; }
+.dot[data-prov="true"] { border-color: var(--uv-300); }
+.node[data-state="active"] .dot { transform: scale(1.5); border-color: var(--ice); background: var(--uv-500); box-shadow: 0 0 0 6px color-mix(in oklab, var(--uv-500) 25%, transparent), 0 0 30px var(--uv-500); }
+.node[data-state="secondary"] .dot { transform: scale(1.3); border-color: var(--plasma); background: var(--plasma-dim); }
+.node[data-state="active"] .v { color: var(--ice); }
+.v { font-size: var(--fs-sm); font-weight: 600; }
+.d { font-size: 0.72rem; color: var(--steel-300); }
+.y { font-family: var(--font-mono); font-size: 0.7rem; color: var(--amber); text-transform: uppercase; }

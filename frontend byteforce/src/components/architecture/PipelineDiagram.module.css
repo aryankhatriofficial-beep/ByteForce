@@ -1,0 +1,36 @@
+.wrap { display: flex; flex-direction: column; gap: var(--s-4); padding-top: var(--s-5); }
+.stageBar { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.stageBtn { min-height: 40px; padding: 0 var(--s-4); border: 1px solid var(--line); border-radius: var(--r-md); background: transparent; color: var(--steel-300); font-size: var(--fs-sm); font-weight: 600; transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast); }
+.stageBtn:hover { color: var(--ice); border-color: var(--steel-300); }
+.stageBtn[aria-selected="true"] { color: var(--void); background: var(--ice); border-color: var(--ice); }
+.stageText { min-height: 3.2em; color: var(--ice-dim); max-width: 80ch; }
+.grid { display: grid; grid-template-columns: 1fr 320px; gap: var(--s-5); align-items: start; }
+.canvas { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); background: radial-gradient(800px 400px at 60% 40%, color-mix(in oklab, var(--uv-700) 12%, transparent), transparent 70%), var(--bg-1); }
+.svg { width: 100%; min-width: 860px; height: auto; display: block; }
+.zone { fill: none; stroke-width: 1.2; stroke-dasharray: 6 6; }
+.zone[data-zone="client"] { stroke: var(--steel-300); fill: color-mix(in oklab, var(--steel-600) 12%, transparent); }
+.zone[data-zone="backend"] { stroke: var(--uv-400); fill: color-mix(in oklab, var(--uv-700) 8%, transparent); }
+.zone[data-zone="separate"] { stroke: var(--amber); stroke-dasharray: 3 5; }
+.zone[data-zone="external"] { stroke: var(--plasma); fill: color-mix(in oklab, var(--plasma) 4%, transparent); }
+.zoneLabel { fill: var(--steel-300); font-family: var(--font-body); font-size: 13px; font-weight: 600; }
+.link { fill: none; stroke: var(--steel-500); stroke-width: 1.4; transition: stroke var(--dur-base), stroke-width var(--dur-base); }
+.link[data-dashed="true"] { stroke-dasharray: 5 6; }
+.link[data-lit="true"] { stroke: var(--uv-300); stroke-width: 2.2; }
+.pkt { fill: var(--plasma); }
+.comp { cursor: pointer; outline: none; }
+.comp rect { fill: var(--bg-2); stroke: var(--line-strong); stroke-width: 1.2; transition: fill var(--dur-fast), stroke var(--dur-fast); }
+.comp text { fill: var(--ice-dim); font-family: var(--font-body); font-size: 13.5px; font-weight: 600; pointer-events: none; }
+.comp .sub { font-size: 11.5px; font-weight: 500; fill: var(--steel-300); }
+.comp[data-zone="external"] rect { stroke-dasharray: 4 4; }
+.comp[data-zone="separate"] rect { stroke: var(--amber); stroke-dasharray: 4 4; }
+.comp:hover rect { stroke: var(--uv-300); }
+.comp[data-lit="true"] rect { stroke: var(--uv-400); fill: color-mix(in oklab, var(--uv-600) 18%, var(--bg-2)); }
+.comp[data-lit="true"] text { fill: var(--ice); }
+.comp[aria-pressed="true"] rect { fill: var(--ice); stroke: var(--ice); }
+.comp[aria-pressed="true"] text, .comp[aria-pressed="true"] .sub { fill: var(--void); }
+.comp:focus-visible rect { stroke: var(--uv-300); stroke-width: 3; }
+.panel { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-5); border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--bg-2); box-shadow: var(--elev-2); position: sticky; top: calc(var(--nav-h) + var(--s-4)); }
+.dl { margin: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.dl dt { font-size: var(--fs-xs); font-weight: 700; color: var(--uv-300); }
+.dl dd { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--ice-dim); }
+@media (max-width: 999px) { .grid { grid-template-columns: 1fr; } .panel { position: static; } }
