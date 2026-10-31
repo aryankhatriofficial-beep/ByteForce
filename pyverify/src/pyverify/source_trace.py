@@ -408,6 +408,7 @@ def _unavailable_result(reason: str, *, crypto_status: str = "not_checked") -> d
         "source_reference": {"status": "unavailable", "repository": None, "commit": None, "errors": [reason]},
         "commit_resolution": {"status": "unavailable", "commit": None, "errors": [reason]},
         "repository_policy": {"status": "not_checked", "configured": False, "matches": None},
+        "provenance_availability": {"status": "not_checked", "available": None},
         "source_inventory": {"status": "SOURCE_INVENTORY_UNAVAILABLE", "complete": False, "entries": [], "errors": [reason]},
         "file_comparison": {"status": "PARTIAL", "counts": {}},
         "sdist_inventory": {"status": "SDIST_INVENTORY_NOT_CHECKED", "complete": None, "entries": []},
@@ -608,7 +609,10 @@ def verify_source_trace(
     object is always cryptographically verified here before any of its claims are used.
     """
     if provenance is None:
-        return _unavailable_result("SLSA provenance is unavailable")
+        result = _unavailable_result("SLSA provenance is unavailable")
+        result["provenance_availability"] = {"status": "missing", "available": False}
+        result["verdict"] = build_source_trace_verdict(result)
+        return result
     if (
         not _limit_is_valid(max_source_size)
         or not _limit_is_valid(max_members)
@@ -776,14 +780,28 @@ def verify_pypi_source_trace(
             deadline=end,
             max_response_size=max_provenance_size,
         )
-    except (ProvenanceNotFoundError, NoAttestationsError) as exc:
+    except NoAttestationsError as exc:
         result = _unavailable_result("PyPI provenance is unavailable: {}".format(exc))
         result["release_artifact_hashes"] = release_hashes
+        result["provenance_availability"] = {"status": "empty", "available": True, "detail": str(exc)}
         result["verdict"] = build_source_trace_verdict(result)
         return result
-    except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
+    except ProvenanceNotFoundError as exc:
+        result = _unavailable_result("PyPI provenance is unavailable: {}".format(exc))
+        result["release_artifact_hashes"] = release_hashes
+        result["provenance_availability"] = {"status": "missing", "available": False, "detail": str(exc)}
+        result["verdict"] = build_source_trace_verdict(result)
+        return result
+    except (OSError, RuntimeError, TimeoutError) as exc:
         result = _unavailable_result("Could not retrieve PyPI provenance: {}".format(exc))
         result["release_artifact_hashes"] = release_hashes
+        result["provenance_availability"] = {"status": "unavailable", "available": None, "detail": str(exc)}
+        result["verdict"] = build_source_trace_verdict(result)
+        return result
+    except ValueError as exc:
+        result = _unavailable_result("PyPI provenance response was malformed: {}".format(exc))
+        result["release_artifact_hashes"] = release_hashes
+        result["provenance_availability"] = {"status": "malformed", "available": True, "detail": str(exc)}
         result["verdict"] = build_source_trace_verdict(result)
         return result
     result = verify_source_trace(
@@ -809,5 +827,6 @@ def verify_pypi_source_trace(
         and result.get("file_comparison", {}).get("status") == "RELEASE_FILES_MATCH"
     ):
         result["status"] = "SOURCE_TRACE_COMPLETE"
+    result["provenance_availability"] = {"status": "available", "available": True}
     result["verdict"] = build_source_trace_verdict(result)
     return result

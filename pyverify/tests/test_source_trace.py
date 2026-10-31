@@ -270,6 +270,7 @@ def test_source_trace_missing_provenance_is_partial_not_pass(tmp_path):
     )
     assert result["status"] == "SOURCE_TRACE_PARTIAL"
     assert result["source_reference"]["status"] == "unavailable"
+    assert result["provenance_availability"]["status"] == "missing"
     assert result["verdict"]["status"] == "WARNING"
 
 
