@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import time
+from threading import Event
 
 import pytest
 
@@ -208,7 +209,7 @@ def test_hash_failure_cleans_temporary_directory(monkeypatch, tmp_path):
 
 def test_deadline_cancels_blocked_open(monkeypatch):
     mock_metadata(monkeypatch)
-    cancelled = asyncio.Event()
+    cancelled = Event()
 
     async def blocked_open(url, allowed_host, deadline, headers=None):
         try:
@@ -226,7 +227,7 @@ def test_deadline_cancels_blocked_open(monkeypatch):
 
 
 def test_deadline_cancels_blocked_metadata_request(monkeypatch):
-    cancelled = asyncio.Event()
+    cancelled = Event()
 
     async def blocked_metadata(project_name, version, filename, deadline):
         try:
@@ -246,7 +247,7 @@ def test_deadline_cancels_blocked_metadata_request(monkeypatch):
 
 
 def test_deadline_cancels_blocked_body_read():
-    cancelled = asyncio.Event()
+    cancelled = Event()
 
     class Reader:
         async def read(self, size):
@@ -274,7 +275,7 @@ def test_deadline_cancels_blocked_body_read():
 
 
 def test_transport_cancels_blocked_connection_establishment(monkeypatch):
-    cancelled = asyncio.Event()
+    cancelled = Event()
 
     async def blocked_connection(*args, **kwargs):
         try:

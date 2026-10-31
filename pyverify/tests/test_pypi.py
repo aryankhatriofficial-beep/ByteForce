@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+from threading import Event
 
 import pytest
 
@@ -204,7 +205,7 @@ def test_sync_metadata_fetch_rejects_untrusted_redirect(monkeypatch):
 
 def test_sync_metadata_fetch_enforces_absolute_timeout(monkeypatch):
     monkeypatch.setattr(pypi, "_METADATA_REQUEST_TIMEOUT", 0.05)
-    cancelled = asyncio.Event()
+    cancelled = Event()
 
     async def blocked_connection(*args, **kwargs):
         try:
