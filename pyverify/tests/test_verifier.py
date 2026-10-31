@@ -1,7 +1,11 @@
 import asyncio
+import base64
+import csv
 import hashlib
+import io
 import time
 from threading import Event
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
@@ -58,25 +62,74 @@ def mock_download(monkeypatch, chunks=None, final_url=URL, error=None, read_erro
     return recorded
 
 
+def make_valid_wheel_bytes():
+    files = {
+        "demo-1.0.dist-info/METADATA": b"Name: demo\nVersion: 1.0\n\n",
+        "demo-1.0.dist-info/WHEEL": b"Wheel-Version: 1.0\n",
+        "demo.py": b"value = 1\n",
+    }
+    record = io.StringIO(newline="")
+    writer = csv.writer(record, lineterminator="\n")
+    for path, content in files.items():
+        digest = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).decode().rstrip("=")
+        writer.writerow((path, "sha256=" + digest, str(len(content))))
+    writer.writerow(("demo-1.0.dist-info/RECORD", "", ""))
+    result = io.BytesIO()
+    with ZipFile(result, "w", ZIP_DEFLATED) as wheel:
+        for path, content in files.items():
+            wheel.writestr(path, content)
+        wheel.writestr("demo-1.0.dist-info/RECORD", record.getvalue())
+    return result.getvalue()
+
+
 def test_verify_pypi_artifact_matching_hash(monkeypatch):
     mock_metadata(monkeypatch)
     download = mock_download(monkeypatch, chunks=[CONTENT[:12], CONTENT[12:]])
 
-    result = verifier.verify_pypi_artifact("demo", "1.0", "demo.whl")
+    result = verifier.verify_pypi_artifact("demo", "1.0", "demo.bin")
 
-    assert result == {
+    assert {
+        key: result[key]
+        for key in (
+            "project_name",
+            "version",
+            "filename",
+            "expected_sha256",
+            "actual_sha256",
+            "matches",
+            "downloaded_size",
+            "download_url",
+        )
+    } == {
         "project_name": "demo",
         "version": "1.0",
-        "filename": "demo.whl",
+        "filename": "demo.bin",
         "expected_sha256": SHA256,
         "actual_sha256": SHA256,
         "matches": True,
         "downloaded_size": len(CONTENT),
         "download_url": URL,
     }
+    assert result["verdict"]["status"] == "WARNING"
+    assert result["evidence_summary"]["artifact_hash"]["matches"] is True
+    assert result["evidence_summary"]["provenance_availability"]["status"] == "not_checked"
     assert download["url"] == URL
     assert download["allowed_host"] == "files.pythonhosted.org"
     assert download["closed"] is True
+
+
+def test_verify_pypi_artifact_integrates_wheel_record_and_inventory(monkeypatch):
+    wheel_bytes = make_valid_wheel_bytes()
+    wheel_hash = hashlib.sha256(wheel_bytes).hexdigest()
+    mock_metadata(monkeypatch, sha256=wheel_hash, size=len(wheel_bytes))
+    mock_download(monkeypatch, chunks=[wheel_bytes[:17], wheel_bytes[17:]])
+
+    result = verifier.verify_pypi_artifact("demo", "1.0", "demo-1.0-py3-none-any.whl")
+
+    assert result["wheel_record"]["status"] == "RECORD_VALID"
+    assert result["artifact_inventory"]["status"] == "INVENTORY_COMPLETE"
+    assert result["evidence_summary"]["wheel_record"]["status"] == "RECORD_VALID"
+    assert result["verdict"]["status"] == "WARNING"
 
 
 def test_verify_pypi_artifact_mismatching_hash(monkeypatch):
