@@ -272,7 +272,7 @@ def test_deadline_cancels_blocked_open(monkeypatch):
             raise
 
     monkeypatch.setattr(verifier, "open_https_response", blocked_open)
-    with pytest.raises(TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):
         verifier.verify_pypi_artifact(
             "demo", "1.0", "demo.whl", max_download_duration=0.05
         )
@@ -292,7 +292,7 @@ def test_deadline_cancels_blocked_metadata_request(monkeypatch):
     monkeypatch.setattr(
         verifier, "_get_pypi_artifact_metadata_with_deadline", blocked_metadata
     )
-    with pytest.raises(TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):
         verifier.verify_pypi_artifact(
             "demo", "1.0", "demo.whl", max_download_duration=0.05
         )
@@ -322,7 +322,7 @@ def test_deadline_cancels_blocked_body_read():
         async for _ in response.iter_bytes(1024, 100):
             pass
 
-    with pytest.raises(TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):
         asyncio.run(run())
     assert cancelled.is_set()
 
@@ -346,7 +346,7 @@ def test_transport_cancels_blocked_connection_establishment(monkeypatch):
             deadline=time.monotonic() + 0.05,
         )
 
-    with pytest.raises(TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):
         asyncio.run(run())
     assert cancelled.is_set()
 

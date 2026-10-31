@@ -216,7 +216,7 @@ def test_sync_metadata_fetch_enforces_absolute_timeout(monkeypatch):
 
     monkeypatch.setattr(_http.asyncio, "open_connection", blocked_connection)
 
-    with pytest.raises(TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):
         pypi.get_pypi_artifact_metadata("demo", "1.0", "demo.whl")
 
     assert cancelled.is_set()

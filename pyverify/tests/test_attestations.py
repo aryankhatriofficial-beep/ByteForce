@@ -200,7 +200,7 @@ def test_fetch_provenance_deadline_cancels_blocked_open(monkeypatch):
             raise
 
     monkeypatch.setattr(_http.asyncio, "open_connection", blocked_open_connection)
-    with pytest.raises(TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):
         attestations.get_pypi_provenance("demo", "1.0", "demo.whl")
     assert cancelled.is_set()
 
