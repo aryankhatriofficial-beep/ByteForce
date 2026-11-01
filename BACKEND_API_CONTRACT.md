@@ -6,14 +6,19 @@ filesystem paths, and never installs or executes a package.
 
 ## Common behavior
 
-- Default base URL: `http://127.0.0.1:8765` (`PYVERIFY_API_PORT` changes only
-  the port; binding remains loopback-only).
+- Default base URL: `http://127.0.0.1:8765`.
+- `PYVERIFY_API_HOST` changes the bind address only when explicitly set; its
+  default is `127.0.0.1`. Hosted runtimes can use their required IPv4 bind host
+  and `PORT` when `PYVERIFY_API_PORT` is unset.
 - JSON request limit: 16 KiB. `Content-Type: application/json` and
   `Content-Length` are required for POST requests. Transfer-Encoding bodies are
   rejected.
 - JSON response limit: 16 MiB.
 - CORS permits only `http://localhost[:port]` and
   `http://127.0.0.1[:port]`; wildcard CORS is not used.
+- `PYVERIFY_CORS_ORIGINS` optionally replaces that local CORS policy with a
+  comma-separated list of exact origins. Remote origins must use HTTPS.
+  CORS does not authenticate callers.
 - Errors have the form `{"error":{"code":"...","message":"..."}}`.
 - Operational HTTP success means the request ran. It does not mean a package
   passed verification. The returned backend verdict is authoritative.

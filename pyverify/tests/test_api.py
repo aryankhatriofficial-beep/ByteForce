@@ -226,6 +226,22 @@ def test_cors_preflight_is_restricted(api_server):
     assert headers.get("Access-Control-Allow-Methods") == "GET, POST, OPTIONS"
 
 
+def test_cors_uses_exact_configured_https_allowlist(api_server, monkeypatch):
+    monkeypatch.setenv("PYVERIFY_CORS_ORIGINS", "https://byteforce.example, https://preview.example")
+    allowed_status, allowed_headers, _ = request(
+        api_server + "/api/health", headers={"Origin": "https://byteforce.example"}
+    )
+    denied_status, denied_headers, denied_body = request(
+        api_server + "/api/health", headers={"Origin": "http://byteforce.example"}
+    )
+
+    assert allowed_status == 200
+    assert allowed_headers.get("Access-Control-Allow-Origin") == "https://byteforce.example"
+    assert denied_status == 403
+    assert denied_headers.get("Access-Control-Allow-Origin") is None
+    assert json.loads(denied_body)["error"]["code"] == "ORIGIN_NOT_ALLOWED"
+
+
 @pytest.mark.parametrize(
     "exception,status_code,error_code",
     [
@@ -254,12 +270,29 @@ def test_verifier_errors_are_mapped_to_json(api_server, monkeypatch, exception, 
 
 def test_port_configuration_defaults_and_validation(monkeypatch):
     monkeypatch.delenv("PYVERIFY_API_PORT", raising=False)
+    monkeypatch.delenv("PORT", raising=False)
     assert api._port_from_environment() == 8765
     monkeypatch.setenv("PYVERIFY_API_PORT", "9876")
     assert api._port_from_environment() == 9876
     monkeypatch.setenv("PYVERIFY_API_PORT", "70000")
     with pytest.raises(ValueError, match="PYVERIFY_API_PORT"):
         api._port_from_environment()
+
+
+def test_port_configuration_accepts_platform_port(monkeypatch):
+    monkeypatch.delenv("PYVERIFY_API_PORT", raising=False)
+    monkeypatch.setenv("PORT", "10000")
+    assert api._port_from_environment() == 10000
+
+
+def test_host_configuration_defaults_to_loopback_and_is_explicit(monkeypatch):
+    monkeypatch.delenv("PYVERIFY_API_HOST", raising=False)
+    assert api._host_from_environment() == "127.0.0.1"
+    monkeypatch.setenv("PYVERIFY_API_HOST", "0.0.0.0")
+    assert api._host_from_environment() == "0.0.0.0"
+    monkeypatch.setenv("PYVERIFY_API_HOST", "example.com")
+    with pytest.raises(ValueError, match="PYVERIFY_API_HOST"):
+        api._host_from_environment()
 
 
 def test_server_binds_only_to_ipv4_loopback():
