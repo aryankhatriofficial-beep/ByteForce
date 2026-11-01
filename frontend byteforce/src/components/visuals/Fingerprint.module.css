@@ -1,0 +1,10 @@
+.fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: var(--s-3); }
+.svg { width: 100%; max-width: 420px; aspect-ratio: 1; overflow: visible; }
+.outer { fill: var(--silver); opacity: 0.85; }
+.inner { fill: var(--uv-400); }
+.bad { fill: var(--red); }
+.coreText { fill: var(--void); font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; }
+.coreSub { fill: var(--void); font-family: var(--font-mono); font-size: 9px; }
+.legend { display: flex; flex-wrap: wrap; gap: var(--s-4); justify-content: center; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--steel-300); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.lo { background: var(--silver); } .li { background: var(--uv-400); } .lb { background: var(--red); }

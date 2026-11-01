@@ -1,0 +1,22 @@
+.hero { position: relative; min-height: 100svh; display: flex; flex-direction: column; justify-content: flex-end; padding: calc(var(--nav-h) + 2rem) 0 var(--s-6); overflow: clip; isolation: isolate; }
+.floorWrap { position: absolute; inset: 40% -20% -10%; perspective: 700px; z-index: -2; pointer-events: none; mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent); }
+.floor { position: absolute; inset: 0; transform: rotateX(62deg); transform-origin: 50% 0; background-image: linear-gradient(color-mix(in oklab, var(--uv-400) 22%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--uv-400) 22%, transparent) 1px, transparent 1px); background-size: 64px 64px; opacity: 0.55; }
+.orb { position: absolute; z-index: -1; right: -7vw; top: 14vh; width: min(50vw, 760px); height: min(50vw, 760px); }
+.content { position: relative; }
+.title { font-size: var(--fs-hero); font-weight: 800; font-stretch: 125%; line-height: 0.86; letter-spacing: -0.055em; text-transform: uppercase; margin: 0 0 var(--s-5) -0.04em; max-width: 9ch; }
+.sub { display: flex; flex-direction: column; gap: var(--s-5); max-width: 620px; }
+.prop { font-size: clamp(1.15rem, 0.8vw + 1rem, 1.5rem); line-height: 1.45; color: var(--ice-dim); }
+.spineFig { margin: var(--s-8) 0 0; padding: 0 var(--gutter); position: relative; }
+.spineTrack { position: absolute; left: calc(var(--gutter) + (100% - 2 * var(--gutter)) / 14); right: calc(var(--gutter) + (100% - 2 * var(--gutter)) / 14); top: 7px; height: 1px; }
+.spineLine { position: absolute; inset: 0; background: linear-gradient(90deg, var(--ice), var(--uv-400), var(--plasma)); transform-origin: 0 50%; }
+.signal { position: absolute; top: -2px; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--plasma); box-shadow: 0 0 10px var(--plasma); animation: travel 7s linear infinite; }
+@keyframes travel { from { left: 0%; } to { left: 100%; } }
+.nodes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }
+.nodes li { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: var(--fs-xs); color: var(--steel-300); }
+.node { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ice); background: var(--void); }
+@media (max-width: 760px) {
+  .orb { right: -28vw; top: 10vh; width: 110vw; height: 110vw; opacity: 0.8; }
+  .nodes li { font-size: 11px; }
+  .spineFig { margin-top: var(--s-6); }
+}
+@media (max-width: 480px) { .nodes li:nth-child(even) span:last-child { visibility: hidden; } }

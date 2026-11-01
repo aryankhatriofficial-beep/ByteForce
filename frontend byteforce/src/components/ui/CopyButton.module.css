@@ -1,0 +1,10 @@
+.btn { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px 0 7px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--bg-1); color: var(--steel-300); font-size: 12px; font-weight: 600; transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast); flex-shrink: 0; }
+.btn:hover { color: var(--ice); border-color: var(--uv-400); }
+.btn svg { width: 16px; height: 16px; overflow: visible; }
+.back, .front { fill: none; stroke: currentColor; stroke-width: 1.4; transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-fast); }
+.tick { fill: none; stroke: var(--mint); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset var(--dur-base) var(--ease-out); }
+.btn[data-state="done"] { color: var(--mint); border-color: color-mix(in oklab, var(--mint) 50%, transparent); }
+.btn[data-state="done"] .back, .btn[data-state="done"] .front { opacity: 0; transform: scale(0.6); transform-origin: center; }
+.btn[data-state="done"] .tick { stroke-dashoffset: 0; }
+.btn[data-state="error"] { color: var(--red); }
+.text { min-width: 4.6em; text-align: left; }

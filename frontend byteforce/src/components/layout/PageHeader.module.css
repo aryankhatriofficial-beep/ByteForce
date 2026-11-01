@@ -1,0 +1,23 @@
+.head { position: relative; padding: calc(var(--nav-h) + clamp(2.5rem, 7vw, 5.5rem)) 0 clamp(2.5rem, 5vw, 4.5rem); overflow: clip; isolation: isolate; border-bottom: 1px solid var(--line); }
+.glow { position: absolute; z-index: -1; width: 70vw; height: 70vw; max-width: 900px; max-height: 900px; right: -18vw; top: -30vw; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklab, var(--uv-600) 30%, transparent), transparent 62%); }
+.head[data-tone="steel"] .glow { background: radial-gradient(circle, color-mix(in oklab, var(--steel-500) 45%, transparent), transparent 62%); }
+.head[data-tone="mint"] .glow { background: radial-gradient(circle, color-mix(in oklab, var(--mint) 14%, transparent), transparent 62%); }
+.inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-7); align-items: end; }
+.copy { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.title { font-size: var(--fs-3xl); font-weight: 700; font-stretch: 118%; letter-spacing: -0.045em; max-width: 16ch; }
+.leadRow { display: flex; gap: var(--s-6); align-items: flex-end; justify-content: space-between; flex-wrap: wrap; }
+.spine { position: relative; margin: 0; padding: 4px 0; }
+.spine ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; position: relative; }
+.spine li { display: flex; align-items: center; gap: 12px; font-size: var(--fs-xs); color: var(--steel-300); line-height: 1; }
+.spine li[data-on="true"] { color: var(--ice); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--steel-500); flex-shrink: 0; margin-left: 2px; }
+.spine li[data-on="true"] .dot { width: 13px; height: 13px; margin-left: 0; background: var(--void); border: 2px solid var(--uv-300); box-shadow: 0 0 10px var(--uv-500); }
+.line { position: absolute; left: 6px; top: 10px; bottom: 10px; width: 1px; background: var(--steel-500); transform-origin: 50% 0; }
+/* Compact (tool pages): shorter header, spine runs horizontally under the copy. */
+.head[data-compact="true"] { padding: calc(var(--nav-h) + clamp(1.5rem, 4vw, 3rem)) 0 clamp(1.5rem, 3vw, 2.5rem); }
+.head[data-compact="true"] .inner { grid-template-columns: 1fr; gap: var(--s-5); align-items: start; }
+.head[data-compact="true"] .title { font-size: var(--fs-2xl); max-width: 22ch; }
+.head[data-compact="true"] .spine { justify-self: start; }
+.head[data-compact="true"] .spine ol { flex-direction: row; flex-wrap: wrap; gap: 8px 22px; }
+.head[data-compact="true"] .line { left: 6px; right: 6px; top: 10px; bottom: auto; width: auto; height: 1px; transform-origin: 0 50%; }
+@media (max-width: 860px) { .inner { grid-template-columns: 1fr; } .head:not([data-compact="true"]) .spine { display: none; } .head[data-compact="true"] .line { display: none; } }

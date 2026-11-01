@@ -5,6 +5,8 @@ __pycache__/
 .pytest_cache/
 .coverage
 .tox/
+node_modules/
+.pyverify-local/
 
 # Generated Python package metadata and build outputs
 *.egg-info/

@@ -1,0 +1,15 @@
+.region { position: fixed; right: var(--s-4); bottom: var(--s-4); z-index: 120; display: flex; flex-direction: column; gap: var(--s-2); margin: 0; padding: 0; list-style: none; max-width: min(380px, calc(100vw - 2rem)); }
+.toast {
+  --c: var(--uv-400);
+  position: relative; display: flex; flex-direction: column; gap: 2px; padding: var(--s-3) var(--s-6) var(--s-3) var(--s-4);
+  background: color-mix(in oklab, var(--navy-900) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--line-strong); border-left: 3px solid var(--c); border-radius: var(--radius); font-size: var(--fs-sm);
+  animation: toastIn 0.45s var(--ease-out);
+}
+.toast span { color: var(--ice-dim); }
+.toast[data-tone="pass"] { --c: var(--mint); }
+.toast[data-tone="warn"] { --c: var(--amber); }
+.toast[data-tone="fail"] { --c: var(--red); }
+.close { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border: 0; background: transparent; color: var(--steel-300); font-size: 1.1rem; border-radius: 50%; }
+.close:hover { color: var(--ice); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } }

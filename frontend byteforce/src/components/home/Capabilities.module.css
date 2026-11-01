@@ -1,0 +1,23 @@
+.caps { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; gap: var(--s-6); padding-block: var(--s-8); overflow: hidden; }
+.head { flex-shrink: 0; }
+.viewport { perspective: 1200px; overflow: visible; }
+.track { list-style: none; margin: 0; padding: 0 var(--gutter); display: flex; gap: var(--s-5); width: max-content; transform-style: preserve-3d; }
+.card {
+  position: relative; width: clamp(260px, 28vw, 360px); min-height: 340px; padding: var(--s-6) var(--s-5) var(--s-5);
+  display: flex; flex-direction: column; gap: var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, color-mix(in oklab, var(--steel-700) 60%, transparent), color-mix(in oklab, var(--void) 70%, transparent));
+  transition: border-color 0.3s, transform 0.4s var(--ease-out);
+}
+.card:hover { border-color: var(--uv-400); }
+.num { font-family: var(--font-display); font-size: 4.2rem; font-weight: 800; font-stretch: 125%; line-height: 1; color: transparent; -webkit-text-stroke: 1px var(--steel-400); transition: -webkit-text-stroke-color 0.3s; }
+.card:hover .num { -webkit-text-stroke-color: var(--uv-300); }
+.tag { color: var(--uv-300); margin-top: auto; }
+.t { font-size: var(--fs-xl); font-stretch: 105%; }
+.bar { position: absolute; left: var(--s-5); right: var(--s-5); bottom: 0; height: 2px; background: var(--grad-uv); }
+@media (max-width: 899px) {
+  .caps { min-height: 0; }
+  .viewport { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: var(--s-3); }
+  .card { scroll-snap-align: start; width: 78vw; min-height: 280px; }
+}
+html[data-motion="reduced"] .viewport { overflow-x: auto; scroll-snap-type: x mandatory; }

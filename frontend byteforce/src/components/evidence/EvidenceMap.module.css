@@ -1,0 +1,56 @@
+.map { --progress: 0; position: relative; padding: var(--s-5) 0 var(--s-2); }
+.track { position: absolute; left: calc(100% / 14); right: calc(100% / 14); top: calc(var(--s-5) + 30px); height: 2px; background: repeating-linear-gradient(90deg, var(--steel-500) 0 6px, transparent 6px 12px); overflow: hidden; border-radius: 2px; }
+.fill { position: absolute; inset: 0; background: linear-gradient(90deg, var(--mint), var(--uv-300)); transform-origin: 0 50%; transform: scaleX(var(--progress)); transition: transform var(--dur-slow) var(--ease-out); box-shadow: 0 0 12px var(--mint); }
+.beam { position: absolute; top: -3px; bottom: -3px; width: 22%; background: linear-gradient(90deg, transparent, var(--uv-400), #fff, var(--plasma), transparent); animation: sweep 1.3s var(--ease-inout) infinite; filter: blur(0.5px); }
+@keyframes sweep { from { transform: translateX(-120%); } to { transform: translateX(520%); } }
+.nodes { position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s-2); }
+.item { display: flex; justify-content: center; min-width: 0; }
+.node {
+  --c: var(--steel-400);
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;
+  padding: 0 4px var(--s-3); background: none; border: 0; color: var(--ice); text-align: center; border-radius: var(--r-md);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.node:hover { transform: translateY(-3px); }
+.node[aria-pressed="true"]::after { content: ""; position: absolute; left: 10%; right: 10%; bottom: 0; height: 2px; background: var(--grad-uv); border-radius: 2px; }
+.glyph { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 50%; background: var(--bg-1); box-shadow: 0 0 0 6px var(--bg-0); transition: box-shadow var(--dur-base), filter var(--dur-base); }
+.glyph svg { width: 48px; height: 48px; overflow: visible; }
+.node[aria-pressed="true"] .glyph { box-shadow: 0 0 0 6px var(--bg-0), 0 0 0 8px color-mix(in oklab, var(--c) 60%, transparent), 0 0 30px -4px var(--c); }
+.node[data-status="pass"] { --c: var(--s-pass); }
+.node[data-status="fail"] { --c: var(--s-fail); }
+.node[data-status="warn"] { --c: var(--s-warn); }
+.node[data-status="unavailable"] { --c: var(--s-unavailable); }
+.node[data-status="not_checked"] { --c: var(--s-not_checked); }
+.node[data-status="not_applicable"] { --c: var(--s-not_applicable); }
+.node[data-status="not_configured"] { --c: var(--s-not_configured); }
+.node[data-status="pending"] { --c: var(--uv-400); }
+.gFill { fill: color-mix(in oklab, var(--c) 18%, transparent); stroke: var(--c); stroke-width: 2; }
+.node[data-status="fail"] .gFill { fill: color-mix(in oklab, var(--c) 30%, transparent); }
+.gMark { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.gDashed { fill: none; stroke: var(--c); stroke-width: 1.8; stroke-dasharray: 5 4; }
+.gDotted { fill: none; stroke: var(--c); stroke-width: 2; stroke-dasharray: 1 5; stroke-linecap: round; }
+.gThin { fill: none; stroke: var(--c); stroke-width: 1.4; }
+.gDot { fill: var(--c); }
+.gIdle { fill: none; stroke: var(--steel-500); stroke-width: 1.4; }
+.gPending { fill: none; stroke: var(--uv-400); stroke-width: 2; stroke-dasharray: 30 90; transform-origin: 24px 24px; animation: spin 1.2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.n { font-family: var(--font-mono); font-size: 12px; color: var(--steel-300); }
+.title { font-size: var(--fs-sm); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.state { min-height: 26px; display: flex; align-items: center; }
+.wait { font-size: var(--fs-xs); color: var(--steel-300); }
+
+/* Narrow screens: vertical evidence rail. */
+@media (max-width: 860px) {
+  .map { padding: var(--s-2) 0; }
+  .track { left: 29px; right: auto; top: 30px; bottom: 30px; width: 2px; height: auto; background: repeating-linear-gradient(180deg, var(--steel-500) 0 6px, transparent 6px 12px); }
+  .fill { transform-origin: 50% 0; transform: scaleY(var(--progress)); }
+  .beam { width: auto; height: 22%; left: -3px; right: -3px; top: 0; bottom: auto; background: linear-gradient(180deg, transparent, var(--uv-400), #fff, var(--plasma), transparent); animation-name: sweepY; }
+  @keyframes sweepY { from { transform: translateY(-120%); } to { transform: translateY(520%); } }
+  .nodes { grid-template-columns: 1fr; gap: var(--s-2); }
+  .node { flex-direction: row; text-align: left; padding: 0; gap: var(--s-3); }
+  .node:hover { transform: translateX(3px); }
+  .node[aria-pressed="true"]::after { left: auto; right: 0; top: 18%; bottom: 18%; width: 2px; height: auto; }
+  .n { order: -1; display: none; }
+  .title { flex: 1; font-size: var(--fs-md); }
+  .state { margin-left: auto; padding-right: var(--s-2); }
+}
