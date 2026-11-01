@@ -1,9 +1,7 @@
 name: PyVerify CI
 
-"on":
+on:
   pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
@@ -12,7 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  detect-frontend:
+    runs-on: ubuntu-24.04
+    outputs:
+      present: ${{ steps.detect.outputs.present }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Detect frontend package
+        id: detect
+        shell: bash
+        run: |
+          if [[ -f 'frontend byteforce/package.json' ]]; then
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  backend:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -35,5 +51,41 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e . "pytest<9"
 
-      - name: Run test suite
-        run: python -m pytest
+      - name: Compile backend
+        run: python -m compileall -q src tests
+
+      - name: Run backend test suite
+        run: python -m pytest -q
+
+  frontend:
+    needs: detect-frontend
+    if: needs.detect-frontend.outputs.present == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend byteforce
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend byteforce/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck frontend
+        run: npm run typecheck
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Test frontend
+        run: npm run test
+
+      - name: Build frontend
+        run: npm run build
