@@ -34,9 +34,8 @@ export async function requestJson<T = unknown>(path: string, opts: RequestOption
   const onAbort = () => controller.abort("aborted");
   opts.signal?.addEventListener("abort", onAbort, { once: true });
 
-  let res: Response;
   try {
-    res = await fetch(absoluteUrl(path), {
+    const res = await fetch(absoluteUrl(path), {
       method: opts.method ?? "GET",
       headers: { Accept: "application/json", ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}) },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
@@ -44,7 +43,26 @@ export async function requestJson<T = unknown>(path: string, opts: RequestOption
       credentials: "omit",
       cache: "no-store",
     });
+    // Keep the timeout active through body download and parsing; fetch resolves
+    // when headers arrive, which does not mean the response is complete.
+    const text = await res.text();
+    let parsed: unknown = undefined;
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        if (res.ok) throw new ApiError("invalid_response", "Response was not JSON");
+      }
+    }
+
+    if (!res.ok) {
+      const info = readErrorBody(parsed);
+      const kind = res.status === 404 ? "not_found" : res.status === 400 || res.status === 422 ? "validation" : "http";
+      throw new ApiError(kind, info.message ?? `HTTP ${res.status}`, { status: res.status, code: info.code, detail: info.detail ?? info.message });
+    }
+    return parsed as T;
   } catch (err) {
+    if (err instanceof ApiError) throw err;
     if (controller.signal.aborted) {
       const reason = controller.signal.reason;
       throw reason === "timeout"
@@ -56,21 +74,4 @@ export async function requestJson<T = unknown>(path: string, opts: RequestOption
     clearTimeout(timeout);
     opts.signal?.removeEventListener("abort", onAbort);
   }
-
-  const text = await res.text();
-  let parsed: unknown = undefined;
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      if (res.ok) throw new ApiError("invalid_response", "Response was not JSON");
-    }
-  }
-
-  if (!res.ok) {
-    const info = readErrorBody(parsed);
-    const kind = res.status === 404 ? "not_found" : res.status === 400 || res.status === 422 ? "validation" : "http";
-    throw new ApiError(kind, info.message ?? `HTTP ${res.status}`, { status: res.status, code: info.code, detail: info.detail ?? info.message });
-  }
-  return parsed as T;
 }

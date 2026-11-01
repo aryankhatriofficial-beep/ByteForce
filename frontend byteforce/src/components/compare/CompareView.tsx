@@ -1,25 +1,24 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { InventoryEntry, PackageRelease, VersionMetadata } from "@/lib/api/types";
+import type { InventoryEntry, VersionMetadata } from "@/lib/api/types";
 import { useDataMode } from "@/lib/DataModeProvider";
-import { useCachedReport, usePackage, useReport, useVersionMeta } from "@/lib/useApi";
+import { useCachedReport, useReport, useVersionMeta } from "@/lib/useApi";
 import { describeError } from "@/lib/api/errors";
 import { diffCounts, diffInventories, type DiffRow, type DiffState } from "@/lib/diff";
 import { formatBytes } from "@/lib/hash";
-import { DEMO_PACKAGE_NAMES } from "@/lib/api/demo/fixtures";
+import { DEMO_PACKAGE_NAMES, demoSummaryByName } from "@/lib/api/demo/fixtures";
 import { normalizeName } from "@/lib/validation";
 import { gsap, useGSAP } from "@/lib/motion/gsap";
 import { Flip } from "@/lib/motion/gsap-extra";
 import { useMotion } from "@/lib/motion/MotionProvider";
-import { ReleaseTimeline } from "@/components/inspector/ReleaseTimeline";
 import { StatusPill, DemoTag } from "@/components/ui/StatusPill";
 import { EmptyState, ErrorState, LoadingState, SkeletonBlock } from "@/components/ui/States";
 import { Button } from "@/components/ui/Button";
 import styles from "./CompareView.module.css";
 
 const FILTERS: (DiffState | "all")[] = ["all", "added", "removed", "changed", "unchanged"];
-const pickFile = (r?: PackageRelease) => (r?.files.find((f) => f.filename.endsWith("-none-any.whl")) ?? r?.files.find((f) => f.kind === "wheel") ?? r?.files[0])?.filename;
+const pickFile = (files?: VersionMetadata["files"]) => (files?.find((f) => f.filename.endsWith("-none-any.whl")) ?? files?.find((f) => f.kind === "wheel") ?? files?.[0])?.filename;
 
 export function CompareView() {
   const params = useSearchParams();
@@ -27,13 +26,12 @@ export function CompareView() {
   const { mode } = useDataMode();
   const [draft, setDraft] = useState(params.get("package") ?? (mode === "demo" ? DEMO_PACKAGE_NAMES[0] : ""));
   const name = normalizeName((params.get("package") ?? "").trim());
-  const [slot, setSlot] = useState<"a" | "b">("a");
-  const pkg = usePackage(name || null);
-
-  const sorted = pkg.data?.releases ?? [];
-  const a = params.get("a") ?? sorted.at(-2)?.version ?? sorted.at(-1)?.version;
-  const b = params.get("b") ?? sorted.at(-1)?.version;
-  const recent = sorted.slice(-24);
+  const a = params.get("a") ?? "";
+  const b = params.get("b") ?? "";
+  const metaA = useVersionMeta(name || null, a || null);
+  const metaB = useVersionMeta(name || null, b || null);
+  const [versionA, setVersionA] = useState(a);
+  const [versionB, setVersionB] = useState(b);
 
   const setParam = (patch: Record<string, string>) => {
     const next = new URLSearchParams(params.toString());
@@ -43,44 +41,33 @@ export function CompareView() {
 
   return (
     <div className="stack" style={{ gap: "var(--s-6)" }}>
-      <form className={styles.controls} onSubmit={(e) => { e.preventDefault(); if (draft.trim()) router.replace(`/compare?package=${encodeURIComponent(normalizeName(draft.trim()))}`, { scroll: false }); }}>
+      <form className={styles.controls} onSubmit={(e) => { e.preventDefault(); if (draft.trim() && versionA.trim() && versionB.trim()) router.replace(`/compare?package=${encodeURIComponent(normalizeName(draft.trim()))}&a=${encodeURIComponent(versionA.trim())}&b=${encodeURIComponent(versionB.trim())}`, { scroll: false }); }}>
         <div className="field" style={{ flex: "1 1 260px" }}>
           <label htmlFor="cmp-pkg">Project</label>
           <input id="cmp-pkg" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={mode === "demo" ? "kestrel-http" : "e.g. sampleproject"} autoComplete="off" spellCheck={false} />
         </div>
-        <Button type="submit">Load releases</Button>
-        {mode === "demo" && <div className="row">{DEMO_PACKAGE_NAMES.map((n) => <button key={n} type="button" className="chip" aria-pressed={n === name} onClick={() => { setDraft(n); router.replace(`/compare?package=${n}`, { scroll: false }); }}>{n}</button>)}<DemoTag>Demo</DemoTag></div>}
+        <div className="field"><label htmlFor="cmp-a">Release A</label><input id="cmp-a" className="input" value={versionA} onChange={(e) => setVersionA(e.target.value)} placeholder="e.g. 1.0.0" /></div>
+        <div className="field"><label htmlFor="cmp-b">Release B</label><input id="cmp-b" className="input" value={versionB} onChange={(e) => setVersionB(e.target.value)} placeholder="e.g. 1.1.0" /></div>
+        <Button type="submit">Compare exact releases</Button>
+        {mode === "demo" && <div className="row">{DEMO_PACKAGE_NAMES.map((n) => <button key={n} type="button" className="chip" aria-pressed={n === name} onClick={() => { const versions = demoSummaryByName(n)?.releases.map((r) => r.version) ?? []; const left = versions.at(-2) ?? versions[0] ?? ""; const right = versions.at(-1) ?? ""; setDraft(n); setVersionA(left); setVersionB(right); router.replace(`/compare?package=${n}&a=${left}&b=${right}`, { scroll: false }); }}>{n}</button>)}<DemoTag>Demo</DemoTag></div>}
       </form>
 
-      {!name && <EmptyState title="Choose a project">Enter a PyPI project to compare two of its releases.</EmptyState>}
-      {name && pkg.status === "loading" && <LoadingState label="Loading releases…" />}
-      {pkg.status === "error" && <ErrorState title={describeError(pkg.error).title} action={<Button onClick={pkg.retry}>Retry</Button>}>{describeError(pkg.error).body}</ErrorState>}
-      {pkg.data && sorted.length < 2 && <EmptyState title="Only one release">There is nothing to compare yet.</EmptyState>}
+      {!name && <EmptyState title="Choose a project">Enter a project and two exact release versions. PyVerify does not enumerate all releases.</EmptyState>}
+      {name && (!a || !b) && <EmptyState title="Enter two release versions">The backend discovers artifacts for exact versions only.</EmptyState>}
 
-      {pkg.data && a && b && sorted.length >= 2 && (
+      {name && a && b && (
         <>
           <section className={styles.picker}>
             <div className={styles.selects}>
-              <div className="field"><label htmlFor="ver-a">Release A (before)</label>
-                <select id="ver-a" className="input" value={a} onChange={(e) => setParam({ a: e.target.value })}>{[...sorted].reverse().map((r) => <option key={r.version}>{r.version}</option>)}</select></div>
-              <button type="button" className={styles.swap} onClick={() => setParam({ a: b, b: a })} aria-label="Swap A and B" data-cursor="Swap">⇄</button>
-              <div className="field"><label htmlFor="ver-b">Release B (after)</label>
-                <select id="ver-b" className="input" value={b} onChange={(e) => setParam({ b: e.target.value })}>{[...sorted].reverse().map((r) => <option key={r.version}>{r.version}</option>)}</select></div>
+              <div className="field"><label htmlFor="ver-a">Release A (before)</label><input id="ver-a" className="input" value={versionA} onChange={(e) => setVersionA(e.target.value)} /></div>
+              <button type="button" className={styles.swap} onClick={() => { setVersionA(b); setVersionB(a); setParam({ a: b, b: a }); }} aria-label="Swap A and B" data-cursor="Swap">⇄</button>
+              <div className="field"><label htmlFor="ver-b">Release B (after)</label><input id="ver-b" className="input" value={versionB} onChange={(e) => setVersionB(e.target.value)} /></div>
             </div>
-            {recent.length > 1 && (
-              <>
-                <div className="row" role="radiogroup" aria-label="Which side the timeline sets">
-                  <span className="xs muted">Timeline sets:</span>
-                  <button type="button" role="radio" aria-checked={slot === "a"} className="chip" onClick={() => setSlot("a")}>A · {a}</button>
-                  <button type="button" role="radio" aria-checked={slot === "b"} className="chip" onClick={() => setSlot("b")}>B · {b}</button>
-                </div>
-                <ReleaseTimeline releases={recent} active={b} secondary={a} onSelect={(v) => setParam(slot === "a" ? { a: v } : { b: v })} />
-              </>
-            )}
+            <p className="xs muted">Discovery is exact-version scoped. Use the fields above to change the pair and submit again.</p>
           </section>
 
           <MetadataDiff key={`${a}-${b}`} name={name} a={a} b={b} />
-          <InventorySection key={`inv-${a}-${b}`} name={name} a={a} b={b} fileA={pickFile(sorted.find((r) => r.version === a))} fileB={pickFile(sorted.find((r) => r.version === b))} />
+          <InventorySection key={`inv-${a}-${b}`} name={name} a={a} b={b} fileA={pickFile(metaA.data?.files)} fileB={pickFile(metaB.data?.files)} />
 
           <aside className={styles.scope} role="note">
             <strong>Scope of this comparison.</strong> Declared metadata comes from PyPI. File differences are derived from the backend&apos;s archive inventories
@@ -108,7 +95,7 @@ function MetadataDiff({ name, a, b }: { name: string; a: string; b: string }) {
   if (ma.status === "error" || mb.status === "error") return <ErrorState title={describeError(ma.error ?? mb.error).title}>{describeError(ma.error ?? mb.error).body}</ErrorState>;
   if (!ma.data || !mb.data) return <SkeletonBlock lines={5} height={34} />;
   const A = ma.data, B = mb.data;
-  const deps = setDiff(A.requiresDist, B.requiresDist);
+  const deps = A.requiresDist && B.requiresDist ? setDiff(A.requiresDist, B.requiresDist) : null;
   const files = setDiff(A.files.map((f) => f.filename.replace(A.version, "{v}")), B.files.map((f) => f.filename.replace(B.version, "{v}")));
   const rows: [string, string | undefined, string | undefined][] = [["Requires-Python", A.requiresPython, B.requiresPython], ["License", A.license, B.license], ["Summary", A.summary, B.summary]];
 
@@ -121,8 +108,8 @@ function MetadataDiff({ name, a, b }: { name: string; a: string; b: string }) {
         {rows.map(([k, x, y]) => (
           <div key={k} data-mrow className={styles.mrow} data-changed={(x ?? "") !== (y ?? "")}>
             <span className={styles.mkey}>{k}{(x ?? "") !== (y ?? "") && <em> changed</em>}</span>
-            <span className="mono small break">{x ?? "—"}</span>
-            <span className="mono small break">{y ?? "—"}</span>
+            <span className="mono small break">{x ?? "Not returned"}</span>
+            <span className="mono small break">{y ?? "Not returned"}</span>
           </div>
         ))}
       </div>
@@ -134,24 +121,24 @@ function MetadataDiff({ name, a, b }: { name: string; a: string; b: string }) {
   );
 }
 
-const source = (A: VersionMetadata, B: VersionMetadata) => (A.source === "demo" || B.source === "demo" ? "demo fixture" : "pypi.org");
+const source = (A: VersionMetadata, B: VersionMetadata) => (A.source === "demo" || B.source === "demo" ? "demo fixture" : "PyVerify release metadata");
 
 function setDiff(a: string[], b: string[]) {
   const sa = new Set(a), sb = new Set(b);
   return { added: b.filter((x) => !sa.has(x)), removed: a.filter((x) => !sb.has(x)), same: a.filter((x) => sb.has(x)) };
 }
 
-function DiffList({ title, d, meta }: { title: string; d: ReturnType<typeof setDiff>; meta?: string }) {
+function DiffList({ title, d, meta }: { title: string; d: ReturnType<typeof setDiff> | null; meta?: string }) {
   return (
     <div className={styles.dlist}>
       <h3 className={styles.h3}>{title}</h3>
       {meta && <p className="xs muted">Source: {meta}</p>}
-      <ul>
+      {!d ? <p className="small muted">Both releases must provide this field; the current release route does not return enough metadata to compare it.</p> : <ul>
         {d.added.map((x) => <li key={`+${x}`} data-state="added"><span aria-hidden="true">+</span><span className="mono break">{x}</span><span className="sr-only">added</span></li>)}
         {d.removed.map((x) => <li key={`-${x}`} data-state="removed"><span aria-hidden="true">−</span><span className="mono break">{x}</span><span className="sr-only">removed</span></li>)}
         {d.same.length > 0 && <li data-state="same"><span aria-hidden="true">=</span><span>{d.same.length} unchanged</span></li>}
         {!d.added.length && !d.removed.length && !d.same.length && <li data-state="same"><span aria-hidden="true">∅</span><span>none declared</span></li>}
-      </ul>
+      </ul>}
     </div>
   );
 }
@@ -171,7 +158,8 @@ function InventorySection({ name, a, b, fileA, fileB }: { name: string; a: strin
         <h2 id="inv-title" className={styles.h}>File inventory</h2>
         {repA && repB && <div className="row"><StatusPill status={repA.overall.status} label={`A ${a}`} /><StatusPill status={repB.overall.status} label={`B ${b}`} />{(repA.source === "demo" || repB.source === "demo") && <DemoTag />}</div>}
       </div>
-      {!(repA && repB) && !run && (
+      {!(repA && repB) && !run && (!fileA || !fileB) && <EmptyState title="Release files are not ready">Load both exact releases successfully before requesting archive inventories.</EmptyState>}
+      {!(repA && repB) && !run && fileA && fileB && (
         <EmptyState title="Inventories need the backend" action={<Button variant="primary" onClick={() => setRun(true)}>Compare inventories</Button>}>
           File-level differences come from the backend&apos;s archive inventory. This runs {needed} verification{needed === 1 ? "" : "s"} {mode === "demo" ? "against demo fixtures" : "on the PyVerify backend"} ({fileA ?? "—"} and {fileB ?? "—"}).
         </EmptyState>

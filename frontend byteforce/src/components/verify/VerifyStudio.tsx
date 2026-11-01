@@ -5,7 +5,7 @@ import type { LogLine, PackageSummary, PolicyInput, VerificationReport } from "@
 import { useDataMode } from "@/lib/DataModeProvider";
 import { describeError } from "@/lib/api/errors";
 import { normalizeName, parseIdentifier, validatePolicy } from "@/lib/validation";
-import { DEMO_PACKAGE_NAMES } from "@/lib/api/demo/fixtures";
+import { DEMO_PACKAGE_NAMES, demoSummaryByName } from "@/lib/api/demo/fixtures";
 import { digestsEqual, formatBytes } from "@/lib/hash";
 import { cacheReport } from "@/lib/useApi";
 import { buildStages, STAGE_COPY, type StageId } from "@/lib/evidence";
@@ -96,7 +96,7 @@ export function VerifyStudio() {
   const policyError = validatePolicy(repo, workflow);
   const offline = mode === "live" && connection === "disconnected";
   const busy = phase === "scanning" || phase === "revealing";
-  const canRun = nameValid && !!version && !!filename && !policyError && !busy;
+  const canRun = nameValid && !!version && !!filename && !!file && pkgState === "ok" && !policyError && !busy;
   const formPhase: Phase = project.trim() ? "input" : "idle";
   const shownPhase: Phase = phase === "idle" || phase === "input" ? formPhase : phase;
 
@@ -179,7 +179,7 @@ export function VerifyStudio() {
             <p id="project-help" className="field-hint">{mode === "demo" ? "Fictional fixtures only in demo mode." : "PyPI project name. Paste name==version or a wheel filename to fill everything."}</p>
             {touched && project && !nameValid && <p className="field-error" role="alert">That is not a valid PyPI project name.</p>}
             {mode === "demo" && (
-              <div className={styles.examples}>{DEMO_PACKAGE_NAMES.map((n) => <button key={n} type="button" className="chip" aria-pressed={name === n} onClick={() => setProject(n)}>{n}</button>)}</div>
+              <div className={styles.examples}>{DEMO_PACKAGE_NAMES.map((n) => <button key={n} type="button" className="chip" aria-pressed={name === n} onClick={() => { setProject(n); const v = demoSummaryByName(n)?.latestVersion; if (v) setVersion(v); }}>{n}</button>)}</div>
             )}
           </div>
 
@@ -206,7 +206,7 @@ export function VerifyStudio() {
                 </div>
                 {file && (
                   <div className={styles.fileMeta}>
-                    <span className="xs muted">{file.kind === "wheel" ? "Wheel" : "Source distribution"} · {formatBytes(file.sizeBytes)} · published SHA-256</span>
+                    <span className="xs muted">{file.kind === "wheel" ? "Wheel" : file.kind === "sdist" ? "Source distribution" : "Other artifact"} · {formatBytes(file.sizeBytes)} · published SHA-256</span>
                     <span className={`mono xs break ${styles.hash}`}>{file.sha256 || "not published"}</span>
                     {file.sha256 && <CopyButton value={file.sha256} />}
                     <span className="xs muted">{pkg.source === "pypi" ? "From PyVerify release metadata — public digest, not yet verified." : "Demo fixture — fictional digest."}</span>

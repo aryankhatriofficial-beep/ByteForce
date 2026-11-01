@@ -29,7 +29,17 @@ export const liveProvider: PyVerifyProvider = {
     return normalizeReport(await requestJson(endpoints.verify(), { method: "POST", body: toVerifyBody(req), signal }));
   },
   async sourceTrace(req, signal) {
-    return requestJson(endpoints.sourceTrace(), { method: "POST", body: toSourceTraceBody(req), signal, timeoutMs: 600_000 });
+    const payload = await requestJson<unknown>(endpoints.sourceTrace(), { method: "POST", body: toSourceTraceBody(req), signal, timeoutMs: 600_000 });
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new ApiError("invalid_response", "Source-trace response was not an object.");
+    const result = payload as Record<string, unknown>;
+    if (!result.source_trace || typeof result.source_trace !== "object" || Array.isArray(result.source_trace) || typeof (result.source_trace as Record<string, unknown>).status !== "string" || !result.evidence || typeof result.evidence !== "object" || Array.isArray(result.evidence) || !result.verdict || typeof result.verdict !== "object" || Array.isArray(result.verdict) || !Array.isArray(result.artifacts) || !result.artifacts.every((artifact) => !!artifact && typeof artifact === "object" && typeof (artifact as Record<string, unknown>).filename === "string" && typeof (artifact as Record<string, unknown>).size === "number" && typeof (artifact as Record<string, unknown>).sha256 === "string" && typeof (artifact as Record<string, unknown>).matches === "boolean")) {
+      throw new ApiError("invalid_response", "Source-trace response did not match the PyVerify contract.");
+    }
+    const verdict = result.verdict as Record<string, unknown>;
+    if (typeof verdict.status !== "string" || !Array.isArray(verdict.reasons) || !verdict.reasons.every((reason) => typeof reason === "string")) {
+      throw new ApiError("invalid_response", "Source-trace response has a malformed backend verdict.");
+    }
+    return result as unknown as SourceTraceResponse;
   },
 };
 
@@ -71,7 +81,7 @@ export const demoProvider: PyVerifyProvider = {
     }
     return r;
   },
-  async sourceTrace(_req, _signal) {
+  async sourceTrace() {
     throw new ApiError("not_configured", "Source trace is available only from the live PyVerify backend.");
   },
 };

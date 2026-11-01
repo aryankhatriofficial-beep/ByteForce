@@ -1,12 +1,11 @@
 import type { NextConfig } from "next";
 
-// Security headers applied to every route. `connect-src` allows the PyVerify
-// backend origin and pypi.org (read-only public release metadata).
+// Security headers applied to every route. Network calls go to the configured PyVerify backend.
 const apiOrigin = (() => {
   try {
-    return new URL(process.env.NEXT_PUBLIC_PYVERIFY_API_BASE_URL?.trim() || "http://127.0.0.1:8765").origin;
+    return new URL(process.env.NEXT_PUBLIC_PYVERIFY_API_BASE_URL?.trim() || "http://127.0.0.1:8766").origin;
   } catch {
-    return "http://127.0.0.1:8765";
+    return "http://127.0.0.1:8766";
   }
 })();
 
@@ -18,7 +17,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  `connect-src 'self' ${apiOrigin} https://pypi.org${isDev ? " ws: http://localhost:* http://127.0.0.1:*" : ""}`,
+  `connect-src 'self' ${apiOrigin}${isDev ? " ws: http://localhost:* http://127.0.0.1:*" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -27,6 +26,7 @@ const csp = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  turbopack: { root: process.cwd() },
   async headers() {
     return [
       {

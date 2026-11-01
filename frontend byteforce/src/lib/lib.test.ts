@@ -1,10 +1,31 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parseIdentifier, parseArtifactFilename, validatePolicy } from "./validation";
 import { deriveOverall, normalizeStatus } from "./status";
 import { camelizeKeys, normalizeReport } from "./api/normalize";
 import { buildDemoReport } from "./api/demo/fixtures";
 import { diffInventories, diffCounts } from "./diff";
 import { digestsEqual, chunkHex, sha256Hex } from "./hash";
+import { requestJson } from "./api/client";
+
+describe("API response timeout", () => {
+  it("keeps the timeout active while the response body is pending", async () => {
+    vi.stubGlobal("fetch", (_input: RequestInfo | URL, init?: RequestInit) => Promise.resolve({
+      ok: true,
+      status: 200,
+      text: () => new Promise<string>((_resolve, reject) => {
+        const signal = init?.signal;
+        const abort = () => reject(new DOMException("aborted", "AbortError"));
+        if (signal?.aborted) abort();
+        else signal?.addEventListener("abort", abort, { once: true });
+      }),
+    } as Response));
+    try {
+      await expect(requestJson("/api/health", { timeoutMs: 15 })).rejects.toMatchObject({ kind: "timeout" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
 
 describe("parseIdentifier", () => {
   it("accepts name and pinned forms", () => {
@@ -49,20 +70,20 @@ describe("normalizeReport", () => {
   it("camelizes snake_case backend payloads", () => {
     expect(camelizeKeys({ expected_sha256: "a", nested: [{ total_entries: 1 }] })).toEqual({ expectedSha256: "a", nested: [{ totalEntries: 1 }] });
   });
-  it("maps a snake_case report and treats missing sections as null", () => {
+  it("maps the PyVerify response envelope and preserves unchecked source trace", () => {
     const r = normalizeReport({
-      package: { name: "x", version: "1" },
-      artifact: { filename: "x-1-py3-none-any.whl", expected_sha256: "ab", observed_sha256: "ab", size_bytes: 10 },
-      checks: [{ id: "hash", status: "PASSED", summary: "ok" }],
+      verification: { project_name: "x", version: "1", filename: "x-1-py3-none-any.whl", expected_sha256: "ab", actual_sha256: "ab", matches: true, downloaded_size: 10, evidence_summary: { limitations: [] } },
+      evidence: { artifact_sha256: { status: "MATCH", stage_status: "VERIFIED", matches: true }, source_trace: { status: "NOT_CHECKED", stage_status: "NOT_CHECKED", checked: false } },
+      verdict: { status: "WARNING", reasons: ["Provenance unavailable."] },
     });
     expect(r.source).toBe("live");
     expect(r.checks[0].id).toBe("digest");
-    expect(r.overall.status).toBe("pass");
+    expect(r.overall.status).toBe("warn");
     expect(r.provenance).toBeNull();
-    expect(r.sourceTrace).toBeNull();
+    expect(r.sourceTrace?.status).toBe("not_checked");
   });
   it("rejects payloads without an artifact", () => {
-    expect(() => normalizeReport({ package: {} })).toThrow();
+    expect(() => normalizeReport({ verification: {}, evidence: {}, verdict: {} })).toThrow();
   });
 });
 
@@ -107,7 +128,7 @@ describe("diff + hash helpers", () => {
 });
 
 import { buildStages } from "./evidence";
-import { toVerifyBody } from "./api/endpoints";
+import { toSourceTraceBody, toVerifyBody } from "./api/endpoints";
 
 describe("evidence spine", () => {
   it("keeps source trace NOT_CHECKED when no source-trace result exists", () => {
@@ -119,7 +140,7 @@ describe("evidence spine", () => {
     expect(stages).toHaveLength(7);
   });
   it("never upgrades a missing check to pass", () => {
-    const r = normalizeReport({ package: { name: "x", version: "1" }, artifact: { filename: "x-1-py3-none-any.whl" }, checks: [] });
+    const r = normalizeReport({ verification: { project_name: "x", version: "1", filename: "x-1.whl" }, evidence: { source_trace: { status: "NOT_CHECKED", stage_status: "NOT_CHECKED", checked: false } }, verdict: { status: "WARNING", reasons: [] } });
     const stages = buildStages(r, { attestationsRequested: true, policySupplied: false });
     expect(stages.every((s) => s.status !== "pass")).toBe(true);
     expect(stages[0].status).toBe("unavailable"); // not downloaded
@@ -132,11 +153,13 @@ describe("evidence spine", () => {
 });
 
 describe("backend request mapping", () => {
-  it("sends project/version/filename and only explicitly-set options", () => {
-    expect(toVerifyBody({ package: "p", version: "1", filename: "p-1.whl" })).toEqual({ project: "p", version: "1", filename: "p-1.whl" });
+  it("sends exact request fields from the backend contract", () => {
+    expect(toVerifyBody({ package: "p", version: "1", filename: "p-1.whl" })).toEqual({ project: "p", version: "1", filename: "p-1.whl", verify_attestations: false });
     const b = toVerifyBody({ package: "p", version: "1", filename: "f", verifyAttestations: false, policy: { repository: "o/r", workflow: "w.yml" } });
-    expect(b.project).toBe("p");
-    expect(Object.keys(b)).toHaveLength(6);
+    expect(b).toEqual({ project: "p", version: "1", filename: "f", verify_attestations: false, expected_github_repository: "o/r", expected_workflow_filename: "w.yml" });
+  });
+  it("maps source-trace request fields", () => {
+    expect(toSourceTraceBody({ project: "p", version: "1", wheelFilename: "p-1.whl", sdistFilename: "p-1.tar.gz", attestedFilename: "p-1.whl", expectedSourceRepository: "o/r" })).toEqual({ project: "p", version: "1", wheel_filename: "p-1.whl", sdist_filename: "p-1.tar.gz", attested_filename: "p-1.whl", expected_source_repository: "o/r" });
   });
   it("normalises new status spellings", () => {
     expect(normalizeStatus("NOT_CHECKED")).toBe("not_checked");
