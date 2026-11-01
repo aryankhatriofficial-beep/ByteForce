@@ -7,10 +7,20 @@ without guessing field names or interpreting missing evidence as success.
 ## Server and shared rules
 
 - Base URL: `http://127.0.0.1:8765`.
-- `PYVERIFY_API_PORT` selects a different local port. The server always binds
-  to `127.0.0.1`.
-- CORS accepts only `http://localhost` and `http://127.0.0.1` origins, with an
-  optional valid port. There is no wildcard origin.
+- `PYVERIFY_API_PORT` selects a different port; otherwise the platform `PORT`
+  variable is used when present. The local default remains `8765`.
+- `PYVERIFY_API_HOST` selects an IPv4 bind address. Its safe default is
+  `127.0.0.1`; a hosted container must explicitly set the host required by its
+  platform (commonly `0.0.0.0`).
+- The server honors the platform `PORT` variable when `PYVERIFY_API_PORT` is
+  unset. `PYVERIFY_LOG_LEVEL` controls standard-library request logging and
+  defaults to `INFO`.
+- By default CORS accepts only `http://localhost` and `http://127.0.0.1`
+  origins, with an optional valid port. A deployment can set
+  `PYVERIFY_CORS_ORIGINS` to a comma-separated list of exact origins, for
+  example `https://byteforce.example,https://preview.example`. Configured
+  remote origins must use HTTPS. Wildcard origins are never accepted. CORS is
+  a browser policy, not authentication or access control.
 - POST requests require `Content-Type: application/json` and `Content-Length`.
   The body cap is 16 KiB; transfer-encoded bodies are rejected.
 - JSON responses are capped at 16 MiB.

@@ -2,7 +2,9 @@
 
 import asyncio
 import copy
+import ipaddress
 import json
+import logging
 import os
 import re
 import tempfile
@@ -23,6 +25,7 @@ from pyverify.verifier import verify_pypi_artifact
 
 
 DEFAULT_PORT = 8765
+DEFAULT_HOST = "127.0.0.1"
 MAX_REQUEST_BYTES = 16 * 1024
 MAX_RESPONSE_BYTES = 16 * 1024 * 1024
 MAX_SOURCE_ARTIFACT_BYTES = 1024 * 1024 * 1024
@@ -50,9 +53,21 @@ class _RequestError(Exception):
 
 
 def _local_origin(origin: str | None) -> bool:
-    """Allow HTTP origins on localhost or the IPv4 loopback only."""
+    """Allow local HTTP origins by default and exact HTTPS origins when configured."""
     if origin is None:
         return True
+    configured = os.environ.get("PYVERIFY_CORS_ORIGINS")
+    if configured is None:
+        return _valid_local_http_origin(origin)
+    allowed = {
+        candidate
+        for entry in configured.split(",")
+        if _valid_configured_origin(candidate := entry.strip())
+    }
+    return origin in allowed
+
+
+def _valid_local_http_origin(origin: str) -> bool:
     try:
         parsed = urlsplit(origin)
         port = parsed.port
@@ -70,6 +85,35 @@ def _local_origin(origin: str | None) -> bool:
                 ":{}".format(port) if port is not None else "",
             )
         )
+    except (TypeError, ValueError):
+        return False
+
+
+def _valid_configured_origin(origin: str) -> bool:
+    """Validate a serialized origin. Non-local plain HTTP is never accepted."""
+    try:
+        parsed = urlsplit(origin)
+        port = parsed.port
+        canonical = (
+            parsed.scheme in ("http", "https")
+            and bool(parsed.hostname)
+            and parsed.username is None
+            and parsed.password is None
+            and parsed.path == ""
+            and not parsed.query
+            and not parsed.fragment
+            and (port is None or 1 <= port <= 65535)
+            and origin == "{}://{}{}".format(
+                parsed.scheme,
+                parsed.hostname,
+                ":{}".format(port) if port is not None else "",
+            )
+        )
+        if not canonical:
+            return False
+        if parsed.scheme == "https":
+            return True
+        return parsed.hostname in ("localhost", "127.0.0.1")
     except (TypeError, ValueError):
         return False
 
@@ -382,16 +426,24 @@ async def _download_source_trace_artifact(metadata: dict[str, Any], destination:
 
 
 def _port_from_environment() -> int:
-    raw_port = os.environ.get("PYVERIFY_API_PORT")
+    raw_port = os.environ.get("PYVERIFY_API_PORT") or os.environ.get("PORT")
     if raw_port is None:
         return DEFAULT_PORT
     try:
         port = int(raw_port, 10)
     except ValueError as exc:
-        raise ValueError("PYVERIFY_API_PORT must be an integer from 1 to 65535") from exc
+        raise ValueError("PYVERIFY_API_PORT or PORT must be an integer from 1 to 65535") from exc
     if not 1 <= port <= 65535:
-        raise ValueError("PYVERIFY_API_PORT must be an integer from 1 to 65535")
+        raise ValueError("PYVERIFY_API_PORT or PORT must be an integer from 1 to 65535")
     return port
+
+
+def _host_from_environment() -> str:
+    raw_host = os.environ.get("PYVERIFY_API_HOST", DEFAULT_HOST)
+    try:
+        return str(ipaddress.IPv4Address(raw_host))
+    except ipaddress.AddressValueError as exc:
+        raise ValueError("PYVERIFY_API_HOST must be a valid IPv4 address") from exc
 
 
 class PyVerifyRequestHandler(BaseHTTPRequestHandler):
@@ -403,8 +455,7 @@ class PyVerifyRequestHandler(BaseHTTPRequestHandler):
         self.connection.settimeout(10)
 
     def log_message(self, format: str, *args: Any) -> None:
-        # Keep request logging local and avoid default stderr noise in development.
-        return
+        logging.getLogger("pyverify.api").info("%s - %s", self.address_string(), format % args)
 
     def _send_json(self, status: int, payload: dict[str, Any], *, extra_headers=None) -> None:
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -438,7 +489,7 @@ class PyVerifyRequestHandler(BaseHTTPRequestHandler):
     def _check_origin(self) -> bool:
         origin = self.headers.get("Origin")
         if not _local_origin(origin):
-            self._error(403, "ORIGIN_NOT_ALLOWED", "Only local frontend origins are allowed.")
+            self._error(403, "ORIGIN_NOT_ALLOWED", "The request origin is not allowlisted.")
             return False
         return True
 
@@ -669,19 +720,33 @@ class PyVerifyRequestHandler(BaseHTTPRequestHandler):
     do_HEAD = do_PUT
 
 
-def create_server(port: int | None = None) -> ThreadingHTTPServer:
-    """Create a development server bound strictly to IPv4 loopback."""
+def create_server(port: int | None = None, host: str | None = None) -> ThreadingHTTPServer:
+    """Create the API server; binding remains loopback unless explicitly configured."""
     if port is None:
         port = _port_from_environment()
+    if host is None:
+        host = _host_from_environment()
     if isinstance(port, bool) or not isinstance(port, int) or not 0 <= port <= 65535:
         raise ValueError("port must be an integer from 0 to 65535")
-    return ThreadingHTTPServer(("127.0.0.1", port), PyVerifyRequestHandler)
+    try:
+        host = str(ipaddress.IPv4Address(host))
+    except ipaddress.AddressValueError as exc:
+        raise ValueError("host must be a valid IPv4 address") from exc
+    return ThreadingHTTPServer((host, port), PyVerifyRequestHandler)
 
 
 def main() -> None:
     port = _port_from_environment()
-    server = create_server(port)
-    print("PyVerify local API listening at http://127.0.0.1:{}".format(server.server_port))
+    host = _host_from_environment()
+    server = create_server(port, host)
+    log_level = os.environ.get("PYVERIFY_LOG_LEVEL", "INFO").upper()
+    if log_level not in {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"}:
+        log_level = "INFO"
+    logging.basicConfig(
+        level=getattr(logging, log_level),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+    print("PyVerify API listening at http://{}:{}".format(host, server.server_port), flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
