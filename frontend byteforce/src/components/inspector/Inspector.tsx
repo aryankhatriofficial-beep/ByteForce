@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { CheckId, VerificationReport } from "@/lib/api/types";
 import { useCachedReport, usePackage, useVersionMeta } from "@/lib/useApi";
@@ -19,7 +19,6 @@ import { EmptyState, ErrorState, SkeletonBlock } from "@/components/ui/States";
 import { Fingerprint } from "@/components/visuals/Fingerprint";
 import { PackageAnatomy } from "@/components/visuals/PackageAnatomy";
 import { NodeGlyph } from "@/components/evidence/EvidenceMap";
-import { ReleaseTimeline } from "./ReleaseTimeline";
 import styles from "./Inspector.module.css";
 
 const TABS = [
@@ -31,7 +30,6 @@ const TAB_CHECK: Partial<Record<TabId, CheckId>> = { fingerprint: "digest", reco
 
 export function Inspector({ name }: { name: string }) {
   const params = useSearchParams();
-  const router = useRouter();
   const { mode } = useDataMode();
   const version = params.get("version");
   const pkg = usePackage(name, version);
@@ -40,10 +38,8 @@ export function Inspector({ name }: { name: string }) {
   const root = useRef<HTMLDivElement>(null);
   const { reduced } = useMotion();
 
-  const selectVersion = (v: string) => router.replace(`/packages/${name}?version=${v}`, { scroll: false });
   const release = pkg.data?.releases.find((r) => r.version === version);
   const files = meta.data?.files.length ? meta.data.files : release?.files ?? [];
-  const recent = useMemo(() => (pkg.data ? pkg.data.releases.slice(-24) : []), [pkg.data]);
 
   // Dossier opening: sheets unfold in sequence once data lands.
   useGSAP(() => {
@@ -71,26 +67,20 @@ export function Inspector({ name }: { name: string }) {
         <dl className={styles.facts}>
           <div><dt>Project</dt><dd className="mono">{pkg.data.name}</dd></div>
           <div><dt>Selected version</dt><dd className="mono">{version ?? "—"}</dd></div>
-          <div><dt>Latest on index</dt><dd className="mono">{pkg.data.latestVersion || "—"}</dd></div>
-          <div><dt>Releases</dt><dd>{pkg.data.releases.length}{first && <span className="muted small"> · {first} to {last}</span>}</dd></div>
+          <div><dt>Exact release</dt><dd className="mono">{version ?? "—"}</dd></div>
+          <div><dt>Files in release</dt><dd>{files.length}{first && <span className="muted small"> · {first} to {last}</span>}</dd></div>
         </dl>
         <p className={styles.source}>
-          {pkg.data.source === "pypi" ? <>Release data read from <span className="mono">pypi.org</span>. Public metadata — not verification evidence.</> : <DemoTag>Demo fixture · fictional</DemoTag>}
+          {pkg.data.source === "pypi" ? <>Release metadata returned by PyVerify. Published SHA-256 is public metadata — not verification evidence.</> : <DemoTag>Demo fixture · fictional</DemoTag>}
         </p>
       </section>
 
-      <section data-sheet className={styles.sheet} aria-label="Release timeline">
+      <section data-sheet className={styles.sheet} aria-label="Selected release">
         <div className={styles.sheetHead}>
-          <h2 className={styles.h}>Releases</h2>
-          <label className="field" style={{ minWidth: 180 }}>
-            <span className="sr-only">Version</span>
-            <select className="input" value={version ?? ""} onChange={(e) => selectVersion(e.target.value)}>
-              {[...pkg.data.releases].reverse().map((r) => <option key={r.version} value={r.version}>{r.version}{r.yanked ? " (yanked)" : ""}</option>)}
-            </select>
-          </label>
+          <h2 className={styles.h}>Selected release</h2>
+          <span className="mono small">{version}</span>
         </div>
-        {recent.length > 1 && <ReleaseTimeline releases={recent} active={version ?? undefined} onSelect={selectVersion} />}
-        {pkg.data.releases.length > recent.length && <p className="xs muted">Timeline shows the latest {recent.length} releases; all {pkg.data.releases.length} are in the selector.</p>}
+        <p className="xs muted">The backend provides metadata for this exact version. It does not enumerate all project releases.</p>
       </section>
 
       <div className={styles.split}>
@@ -100,10 +90,10 @@ export function Inspector({ name }: { name: string }) {
           {meta.status === "error" && <p className="small">{describeError(meta.error).body}</p>}
           {meta.data && (
             <dl className={styles.kv}>
-              <div><dt>Summary</dt><dd>{meta.data.summary ?? "—"}</dd></div>
-              <div><dt>Requires-Python</dt><dd className="mono">{meta.data.requiresPython ?? "—"}</dd></div>
-              <div><dt>License</dt><dd>{meta.data.license ?? "—"}</dd></div>
-              <div><dt>Requires-Dist ({meta.data.requiresDist.length})</dt><dd>{meta.data.requiresDist.length ? <ul className={styles.deps}>{meta.data.requiresDist.map((d) => <li key={d} className="mono">{d}</li>)}</ul> : "none declared"}</dd></div>
+              <div><dt>Summary</dt><dd>{meta.data.summary ?? "Not returned by the release route"}</dd></div>
+              <div><dt>Requires-Python</dt><dd className="mono">{meta.data.requiresPython ?? "Not returned by the release route"}</dd></div>
+              <div><dt>License</dt><dd>{meta.data.license ?? "Not returned by the release route"}</dd></div>
+              <div><dt>Requires-Dist {meta.data.requiresDist ? `(${meta.data.requiresDist.length})` : ""}</dt><dd>{meta.data.requiresDist === null ? "Not returned by the release route" : meta.data.requiresDist.length ? <ul className={styles.deps}>{meta.data.requiresDist.map((d) => <li key={d} className="mono">{d}</li>)}</ul> : "none declared"}</dd></div>
             </dl>
           )}
           <p className="xs muted">Declared by the author. Dependencies are listed, not verified.</p>
@@ -116,7 +106,7 @@ export function Inspector({ name }: { name: string }) {
               {files.map((f) => (
                 <li key={f.filename} className={styles.file}>
                   <div className={styles.fileTop}>
-                    <span className={styles.kind} data-kind={f.kind}>{f.kind === "wheel" ? "wheel" : "sdist"}</span>
+                    <span className={styles.kind} data-kind={f.kind}>{f.kind}</span>
                     <span className="mono small break">{f.filename}</span>
                   </div>
                   <div className={styles.fileMeta}><span className="xs muted">{formatBytes(f.sizeBytes)} · uploaded {f.uploadTime.slice(0, 10)}</span></div>

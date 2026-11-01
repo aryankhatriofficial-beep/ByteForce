@@ -26,7 +26,7 @@ export const DOC_SECTIONS: DocSection[] = [
   {
     id: "quickstart", group: "Start", title: "Running a verification", keywords: "how to use verify studio input",
     blocks: [
-      { kind: "p", text: "Open Verify Studio and type a project name. Its releases and published files load from pypi.org; pick a version and the exact artifact. Optionally switch attestation verification off, or add the publisher repository (owner/name) and workflow filename you expect." },
+      { kind: "p", text: "Open Verify Studio and enter a project plus exact version. PyVerify returns the files for that release; select an exact artifact. Optionally request PEP 740 verification or add the expected publisher repository (owner/name) and workflow filename." },
       { kind: "code", lang: "text", text: "sampleproject\nsampleproject==4.0.0\nsampleproject-4.0.0-py3-none-any.whl" },
       { kind: "p", text: "Pasting name==version or a wheel filename fills the form. Ranges such as >=2 are rejected on purpose: verification is always about one concrete file." },
     ],
@@ -34,7 +34,7 @@ export const DOC_SECTIONS: DocSection[] = [
   {
     id: "digest", group: "Checks", title: "Artifact digest & size", keywords: "sha256 hash size download integrity",
     blocks: [
-      { kind: "p", text: "The backend reads the file's published SHA-256 and size from PyPI's JSON API, downloads the file over HTTPS with a hard byte limit, and recomputes both. A mismatch is a FAIL." },
+      { kind: "p", text: "The backend reads the file's published SHA-256 and size from validated PyPI release metadata, downloads the file over HTTPS with a hard byte limit, and recomputes the digest. A mismatch is a FAIL." },
       { kind: "list", items: ["Proves: the bytes you analyse are exactly the bytes PyPI serves for that filename.", "Does not prove: that those bytes are benign, or that PyPI itself was not compromised before publication."] },
     ],
   },
@@ -120,8 +120,8 @@ export const DOC_SECTIONS: DocSection[] = [
   {
     id: "api", group: "Using PyVerify", title: "API usage", keywords: "api endpoint post verify health curl request json",
     blocks: [
-      { kind: "p", text: "The interface talks to the PyVerify backend (default http://127.0.0.1:8765). Liveness is checked with GET /api/health; a verification is one POST with the exact project, version and filename." },
-      { kind: "code", lang: "bash", text: "curl -s http://127.0.0.1:8765/api/health\n\ncurl -s -X POST http://127.0.0.1:8765/api/v1/verify \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"project\": \"sampleproject\", \"version\": \"4.0.0\", \"filename\": \"sampleproject-4.0.0-py3-none-any.whl\"}'" },
+      { kind: "p", text: "The interface talks to the PyVerify backend (default http://127.0.0.1:8766). Liveness is checked with GET /api/health; a verification is one POST with the exact project, version and filename." },
+      { kind: "code", lang: "bash", text: "curl -s http://127.0.0.1:8766/api/health\n\ncurl -s -X POST http://127.0.0.1:8766/api/v1/verify \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"project\": \"sampleproject\", \"version\": \"4.0.0\", \"filename\": \"sampleproject-4.0.0-py3-none-any.whl\"}'" },
       { kind: "callout", tone: "info", text: "Optional attestation and publisher-policy fields are sent only when you set them in Verify Studio. Their exact field names are defined in one place in the frontend (src/lib/api/endpoints.ts) so they can be matched to the backend." },
     ],
   },
@@ -143,7 +143,7 @@ export const DOC_SECTIONS: DocSection[] = [
         "Downloads are HTTPS-only with a hard size limit; archives are listed and streamed within bounds, never extracted to disk.",
         "PyPI is trusted for availability, not content: every byte is checked against the published digest.",
         "Signing identities are trusted only through Sigstore verification, never from metadata fields.",
-        "This interface sends no credentials, stores no secrets and only connects to the PyVerify backend and pypi.org (read-only metadata), enforced by its Content-Security-Policy.",
+        "This interface sends no credentials, stores no secrets and connects to the configured PyVerify backend, enforced by its Content-Security-Policy.",
         "Files you drop for local comparison are hashed in your browser and never uploaded.",
       ] },
     ],
@@ -151,15 +151,15 @@ export const DOC_SECTIONS: DocSection[] = [
   {
     id: "demo-mode", group: "Using PyVerify", title: "Connection, offline and demo mode", keywords: "demo fixtures live backend offline disconnected",
     blocks: [
-      { kind: "p", text: "The navigation shows the backend connection. If it is offline, verification is disabled with a retry action — nothing is faked. Release metadata from pypi.org still loads." },
+      { kind: "p", text: "The navigation shows the backend connection. If it is offline, live release discovery, verification, and source trace are unavailable; the retry action checks the backend again." },
       { kind: "p", text: "Demo fixtures are opt-in from the connection menu or the command palette: fictional packages (kestrel-http, lumen-cli, quartzite, vellum-schema) with fabricated digests, always labelled DEMO." },
-      { kind: "code", lang: "bash", text: "# point the interface at another backend\ncp .env.example .env.local\nNEXT_PUBLIC_PYVERIFY_API_BASE_URL=http://127.0.0.1:8765" },
+      { kind: "code", lang: "bash", text: "# point the interface at another backend\ncp .env.example .env.local\nNEXT_PUBLIC_PYVERIFY_API_BASE_URL=http://127.0.0.1:8766" },
     ],
   },
   {
     id: "local-hash", group: "Using PyVerify", title: "Local file fingerprint", keywords: "drop file upload sha256 browser webcrypto",
     blocks: [
-      { kind: "p", text: "Dropping a .whl or .tar.gz onto Verify Studio never uploads it. The browser reads the filename to prefill the identifier and computes the file's SHA-256 locally with WebCrypto, so you can compare your local copy to the digest PyPI publishes." },
+      { kind: "p", text: "Dropping a .whl or .tar.gz onto Verify Studio never uploads it. The browser reads the filename to prefill the identifier and computes the file's SHA-256 locally with WebCrypto, so you can compare your local copy to the digest published in PyVerify's release response." },
     ],
   },
 ];

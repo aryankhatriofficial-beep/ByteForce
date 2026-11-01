@@ -42,7 +42,7 @@ export function PackageIndex() {
             const s = demoSummaryByName(n)!;
             return (
               <li key={n}>
-                <TransitionLink href={`/packages/${n}`} className={styles.tile}>
+                <TransitionLink href={`/packages/${n}?version=${s.latestVersion}`} className={styles.tile}>
                                     <strong className={styles.name}>{n}</strong>
                   <span className="small muted">{s.summary}</span>
                   <span className={styles.versions}>{s.releases.map((r) => <span key={r.version} className="chip">{r.version}</span>)}</span>

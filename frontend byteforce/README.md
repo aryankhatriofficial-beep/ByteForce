@@ -5,10 +5,10 @@ tool: PyPI digest verification, wheel metadata and RECORD validation, safe archi
 PEP 740 attestation verification, publisher trust policy, sdist ↔ wheel consistency and verified
 source trace.
 
-This project is **frontend only**; the backend is not modified here. It talks to the PyVerify API at
-`http://127.0.0.1:8765` (`GET /api/health`, `POST /api/v1/verify`) and reads public release metadata
-from pypi.org. If the backend is offline the UI says so and offers Retry; fictional demo fixtures are
-available only when you opt in.
+This project is the frontend for the existing PyVerify backend; backend code is not modified here.
+It calls the configurable local API at `http://127.0.0.1:8766` for health, exact-version release
+discovery, artifact verification, and source trace. If the backend is offline the UI says so and
+offers Retry; fictional demo fixtures are available only when you opt in.
 
 ## Run locally
 
@@ -16,7 +16,7 @@ Requirements: Node ≥ 20.9 (tested on Node 26), npm.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+npm run dev -- --hostname 127.0.0.1 --port 3001  # http://127.0.0.1:3001
 ```
 
 Production:
@@ -29,7 +29,7 @@ npm run build && npm start
 
 | Script | What it does |
 |--------|--------------|
-| `npm run dev` | Next.js dev server (Turbopack) |
+| `npm run dev` | Next.js dev server (Webpack) |
 | `npm run build` | Production build |
 | `npm start` | Serve the production build |
 | `npm run typecheck` | `next typegen` (generates route types) then `tsc --noEmit` |
@@ -39,11 +39,13 @@ npm run build && npm start
 
 ## Connect the backend
 
-Start the PyVerify backend on `127.0.0.1:8765` and the nav badge turns **Backend connected**.
+Start the PyVerify backend on `127.0.0.1:8766` and the nav badge turns **Backend connected**.
 For another address: `cp .env.example .env.local` and set `NEXT_PUBLIC_PYVERIFY_API_BASE_URL`.
 Details: **[docs/API_CONTRACT.md](docs/API_CONTRACT.md)** and **[docs/BACKEND_INTEGRATION.md](docs/BACKEND_INTEGRATION.md)**.
-The names of the optional attestation/policy request fields are unconfirmed — see `OPTIONAL_FIELDS`
-in `src/lib/api/endpoints.ts`.
+Live release discovery requires an exact version because the backend contract does not expose a
+project-wide release list. Supply `project==version`; artifact filenames and published SHA-256 values
+come from the backend response. Source trace is a separate workflow and requires a wheel plus a
+`.tar.gz` sdist from the same release.
 
 ## Routes
 
@@ -64,8 +66,8 @@ Details: [docs/ROUTE_MAP.md](docs/ROUTE_MAP.md).
 | Feature | Source |
 |---|---|
 | Verification evidence, verdicts, evidence map | **Backend** (`POST /api/v1/verify`) — or opt-in demo fixtures |
-| Release lists, artifact filenames, sizes, **published** SHA-256 | **pypi.org** JSON API, labelled "not verification evidence" |
-| Source trace stage | Shown as **Not checked** unless the backend returns a real source-trace result |
+| Exact release artifact filenames, sizes, **published** SHA-256 | **PyVerify backend** (`GET /api/v1/packages/{project}/{version}/files`), labelled as public metadata and not verification evidence |
+| Source trace | Separate **PyVerify backend** workflow (`POST /api/v1/source-trace`); partial/missing evidence stays distinct from success |
 | Local file SHA-256 | Your browser (WebCrypto); the file is never uploaded |
 | Validation, status/verdict logic, docs simulator | Client logic, unit-tested |
 | Architecture diagram | Documentation of the logical pipeline |

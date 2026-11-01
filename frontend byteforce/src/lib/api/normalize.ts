@@ -23,6 +23,12 @@ const titles: Record<CheckId, string> = {
   inventory: "Archive inventory", provenance: "PEP 740 attestation", publisher_policy: "Publisher policy",
   release_consistency: "Release consistency", source_trace: "Source trace",
 };
+function flattenEvidence(value: unknown, prefix = ""): { label: string; value: string }[] {
+  if (Array.isArray(value)) return [{ label: prefix, value: JSON.stringify(value) }];
+  if (isObj(value)) return Object.entries(value).flatMap(([key, child]) => flattenEvidence(child, prefix ? `${prefix}.${key}` : key));
+  if (value === null || value === undefined || !prefix) return [];
+  return [{ label: prefix, value: String(value) }];
+}
 
 export function normalizeReport(payload: unknown): VerificationReport {
   if (!isObj(payload) || !isObj(payload.verification) || !isObj(payload.evidence) || !isObj(payload.verdict)) {
@@ -42,21 +48,18 @@ export function normalizeReport(payload: unknown): VerificationReport {
     if (!isObj(raw) || seen.has(id)) continue;
     seen.add(id);
     const stage = str(raw.stage_status, str(raw.status, "NOT_CHECKED"));
-    const detail = Object.entries(raw)
-      .filter(([k, value]) => k !== "stage_status" && value !== null && ["string", "number", "boolean"].includes(typeof value))
-      .map(([k, value]) => `${k}: ${String(value)}`);
+    const values = flattenEvidence(Object.fromEntries(Object.entries(raw).filter(([k]) => k !== "stage_status")));
+    const detail = values.map(({ label, value }) => `${label}: ${value}`);
     checks.push({
       id, title: titles[id], status: normalizeStatus(stage),
       summary: detail.length ? detail.join(" · ") : `Backend stage status: ${stage}`,
-      evidence: Object.entries(raw).filter(([k, value]) => k !== "stage_status" && value !== null && ["string", "number", "boolean"].includes(typeof value)).map(([label, value]) => ({ label, value: String(value), mono: /sha|filename|repository/i.test(label) })),
+      evidence: values.map(({ label, value }) => ({ label, value, mono: /sha|filename|repository/i.test(label) })),
       limitations: [],
     });
   }
   if (!checks.length) throw new ApiError("invalid_response", "Verification response contained no recognized evidence stages.");
   const expected = str(v.expected_sha256);
   const observed = str(v.actual_sha256) || null;
-  const evidenceSummary = isObj(v.evidence_summary) ? v.evidence_summary : {};
-  const limitations = Array.isArray(evidenceSummary.limitations) ? evidenceSummary.limitations : [];
   const reasons = Array.isArray(verdict.reasons) ? verdict.reasons.filter((x): x is string => typeof x === "string") : [];
   return {
     reportId: `live-${Date.now()}`, generatedAt: new Date().toISOString(), source: "live", raw: payload,

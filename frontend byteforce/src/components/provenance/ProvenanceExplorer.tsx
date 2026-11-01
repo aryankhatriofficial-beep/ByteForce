@@ -5,7 +5,7 @@ import type { CheckStatus, SourceTraceResponse, VerificationReport } from "@/lib
 import { useCachedReport, usePackage, useReport } from "@/lib/useApi";
 import { useDataMode } from "@/lib/DataModeProvider";
 import { describeError } from "@/lib/api/errors";
-import { DEMO_PACKAGE_NAMES } from "@/lib/api/demo/fixtures";
+import { DEMO_PACKAGE_NAMES, demoSummaryByName } from "@/lib/api/demo/fixtures";
 import { normalizeName } from "@/lib/validation";
 import { STATUS } from "@/lib/status";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/motion/gsap";
@@ -100,7 +100,8 @@ export function ProvenanceExplorer() {
     if (!wheel || !sdist || !version) return;
     setTraceBusy(true); setTrace(null); setTraceError(null);
     try {
-      setTrace(await provider.sourceTrace({ project: name, version, wheelFilename: wheel.filename, sdistFilename: sdist.filename, attestedFilename: file ?? wheel.filename }));
+      const attestedFilename = file === wheel.filename || file === sdist.filename ? file : wheel.filename;
+      setTrace(await provider.sourceTrace({ project: name, version, wheelFilename: wheel.filename, sdistFilename: sdist.filename, attestedFilename }));
     } catch (e) { setTraceError(describeError(e).body); }
     finally { setTraceBusy(false); }
   };
@@ -115,7 +116,7 @@ export function ProvenanceExplorer() {
       {mode === "demo" && <>
           <span className="xs muted">Demo scenarios:</span>
           {DEMO_PACKAGE_NAMES.map((n) => (
-            <button key={n} type="button" className="chip" aria-pressed={n === name} onClick={() => { const v = "2.4.1"; setDraft(n); setVersionDraft(v); router.replace(`/provenance?package=${n}&version=${v}`, { scroll: false }); }}>{n}</button>
+            <button key={n} type="button" className="chip" aria-pressed={n === name} onClick={() => { const v = demoSummaryByName(n)?.latestVersion ?? ""; setDraft(n); setVersionDraft(v); router.replace(`/provenance?package=${n}&version=${v}`, { scroll: false }); }}>{n}</button>
           ))}
           <DemoTag>Demo fixtures</DemoTag>
         </>}

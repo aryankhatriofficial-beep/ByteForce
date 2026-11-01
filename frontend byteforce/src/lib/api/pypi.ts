@@ -14,10 +14,13 @@ export async function fetchVersion(name: string, version: string, signal?: Abort
     throw new ApiError("invalid_response", "Release response did not match the PyVerify contract.");
   }
   const release = payload.release as Obj;
-  const metadata = isObj(release.metadata) ? release.metadata : {};
+  if (typeof release.project_name !== "string" || typeof release.version !== "string" || !isObj(release.metadata)) {
+    throw new ApiError("invalid_response", "Release response is missing project, version, or metadata fields.");
+  }
+  const metadata = release.metadata;
   const releaseFiles = release.files as unknown[];
   const files: ReleaseFile[] = releaseFiles.map((value: unknown) => {
-    if (!isObj(value) || typeof value.filename !== "string" || typeof value.sha256 !== "string" || typeof value.size !== "number") {
+    if (!isObj(value) || typeof value.filename !== "string" || !value.filename || typeof value.sha256 !== "string" || !/^[a-f\d]{64}$/i.test(value.sha256) || typeof value.size !== "number" || !Number.isSafeInteger(value.size) || value.size < 0 || !["wheel", "sdist", "other"].includes(str(value.type))) {
       throw new ApiError("invalid_response", "Release response contained an invalid artifact entry.");
     }
     const type = str(value.type);
@@ -29,14 +32,14 @@ export async function fetchVersion(name: string, version: string, signal?: Abort
       uploadTime: str(value.upload_time) || "",
     };
   });
-  const projectName = str(release.project_name) || name;
-  const exactVersion = str(release.version) || version;
+  const projectName = str(release.project_name);
+  const exactVersion = str(release.version);
   return {
     name: projectName,
     version: exactVersion,
     summary: str(metadata.summary) || undefined,
     requiresPython: str(metadata.requires_python) || undefined,
-    requiresDist: [],
+    requiresDist: null,
     files,
     source: "pypi",
   };

@@ -1,91 +1,37 @@
-# PyVerify Frontend ↔ Backend Contract
+# PyVerify frontend ↔ backend contract
 
-**Source of truth for routes and request fields: the project owner's description of the running
-backend** (2026-11-01). The backend source was not available on this machine, so the response schema
-below is what the frontend *accepts*, not a copy of the backend's own definition. Anything the
-backend sends is passed through one tolerant normaliser and is also shown raw in Verify Studio.
+The source of truth is the repository root `BACKEND_API_CONTRACT.md` and the implementation in `pyverify/src/pyverify/api.py`. The frontend uses those exact routes and fields.
 
-| | |
-|---|---|
-| Base URL | `http://127.0.0.1:8765` (override with `NEXT_PUBLIC_PYVERIFY_API_BASE_URL`) |
-| Auth | none assumed; requests use `credentials: "omit"` |
-| CORS | backend must allow the frontend origin for `GET`/`POST` + `Content-Type` |
-| CSP | `connect-src` allows the backend origin and `https://pypi.org` only |
+## Base URL and common behavior
 
-## `GET /api/health`
-Called on load, from the nav's "Retry connection", and the palette. Any 2xx JSON with `ok: true` or
-`status: "ok" | "healthy" | "pass"` is "connected"; anything else, or a network error, is "offline".
-The optional `version` field is shown in the connection panel.
+- Default: `http://127.0.0.1:8766`; override with `NEXT_PUBLIC_PYVERIFY_API_BASE_URL` (no trailing slash).
+- Requests omit credentials. No secrets belong in `NEXT_PUBLIC_*` variables.
+- API errors use `{ "error": { "code": "...", "message": "..." } }`.
+- HTTP 200 means the request completed, not that verification passed. The returned backend verdict is rendered as provided.
+- Live network requests go only to PyVerify. Browser-side release discovery does not call PyPI directly.
 
-## `POST /api/v1/verify`
-```json
-{ "project": "sampleproject", "version": "4.0.0", "filename": "sampleproject-4.0.0-py3-none-any.whl" }
-```
-Optional fields — **names UNCONFIRMED**, defined once in `src/lib/api/endpoints.ts` → `OPTIONAL_FIELDS`
-and only sent when the user sets them:
+## Health
 
-| UI control | Field sent | When |
-|---|---|---|
-| "Verify PEP 740 attestations" switched **off** | `verify_attestations: false` | only when off (default assumed on) |
-| Expected publisher repository | `expected_repository: "owner/name"` | when filled |
-| Workflow filename | `expected_workflow: "release.yml"` | when filled (requires repository) |
+`GET /api/health` → `{ "status": "ok", "service": "pyverify" }`. The frontend requires this exact service response to show connected.
 
-If the backend rejects these names (e.g. 422), change the three strings in `OPTIONAL_FIELDS`.
+## Exact release discovery
 
-### Response — accepted shape
-snake_case or camelCase; unknown fields ignored; missing sections → shown as unavailable / not checked.
+`GET /api/v1/packages/{project}/{version}/files` → `{ "release": { "project_name", "version", "files", "metadata" } }`.
 
-```jsonc
-{
-  "report_id": "…", "generated_at": "ISO-8601",
-  "package": { "name": "…", "version": "…" },          // `project` is accepted for name
-  "artifact": { "filename": "…" /* required */, "url": "…", "size_bytes": 0,
-                "expected_sha256": "…" /* or digests.sha256 */, "observed_sha256": "…|null", "upload_time": "…" },
-  "overall": { "status": "…", "headline": "…" },       // derived conservatively if absent
-  "checks": [ { "id": "digest", "title": "…", "status": "…", "summary": "…",
-                "evidence": [ { "label": "…", "value": "…", "mono": true, "status": "…" } ],
-                "limitations": ["…"] } ],
-  "metadata": {…} | null, "record": {…} | null, "inventory": {…} | null,
-  "provenance": { "status": "…", "absent": false, "attestations": [ … ], "publisher": { … } } | null,
-  "policy": {…} | null, "consistency": {…} | null,
-  "source_trace": {…} | null,                          // normally null: separate workflow
-  "logs": [ { "t": 0, "level": "info|ok|warn|error", "stage": "…", "message": "…" } ]
-}
-```
-Field-level shapes for each section: see `src/lib/api/types.ts` and `src/lib/api/normalize.ts`.
+Each file includes exact `filename`, `type` (`wheel`, `sdist`, `other`), `packagetype`, `sha256`, `size`, `python_version`, `requires_python`, `upload_time`, and `yanked`. URLs are not returned. This route is version scoped; the frontend requests an exact version and does not claim to enumerate every release.
 
-Check ids (aliases in `normalize.ts`): `digest` (hash, sha256), `metadata`, `record`, `inventory`,
-`provenance` (attestation, pep740), `publisher_policy` (policy), `release_consistency`, `source_trace`.
+## Artifact verification
 
-Status spellings → UI status (anything else → **Unavailable**, never Verified):
+`POST /api/v1/verify` requires `project`, `version`, and exact `filename`. The frontend sends `verify_attestations` explicitly and, when configured, uses `expected_github_repository` and `expected_workflow_filename`.
 
-| UI | Accepted |
-|---|---|
-| Verified | pass, passed, ok, success, verified, valid, match |
-| Warning | warn, warning, partial |
-| Failed | fail, failed, error, invalid, mismatch |
-| Not checked | not_checked, skipped, not_run, pending |
-| Not applicable | not_applicable, n/a |
-| Not configured | not_configured, no_policy |
+The response must contain `verification`, `evidence`, and `verdict`. The normalizer maps original verifier fields and backend evidence stages into the existing result UI. Missing fields remain unavailable or not checked. The top-level backend verdict is not recalculated. Source trace is always `NOT_CHECKED` on this route. A matching digest does not establish that package code is safe.
 
-### How the evidence map uses it (`src/lib/evidence.ts`)
-| Stage | From | If missing |
-|---|---|---|
-| PyPI artifact | `artifact.observed_sha256` present | Unavailable |
-| SHA-256 | check `digest` | Not checked |
-| Metadata | check `metadata` | Not checked (Not applicable for sdist) |
-| Attestation | check `provenance` | Not checked if switched off; Unavailable if `provenance.absent` |
-| Publisher | check `publisher_policy` | Not configured if no repository given |
-| RECORD | checks `record` + `inventory` + `release_consistency` (worst wins) | Not checked (N/A for sdist) |
-| Source | check `source_trace` | **Not checked** (separate workflow) |
+## Source trace
 
-### Errors
-`{ "error": { "code", "message", "detail" } }`, FastAPI `{ "detail": … }` or `{ "message" }`.
-400/422 → "Request rejected", 404 → "Not found", other → "Backend error (code)", network →
-"Backend unreachable. Nothing was verified.", timeout (120 s) → "Verification timed out".
-A verification *finding* must be a 200 report with a failing status, not an HTTP error.
+`POST /api/v1/source-trace` requires `project`, `version`, `wheel_filename`, `sdist_filename`, and `attested_filename`; `expected_source_repository` is optional. The UI selects filenames only from the backend’s exact release response. The backend obtains both files itself; the browser sends no URLs or local paths.
 
-## Not backend: PyPI JSON API (read-only)
-`GET https://pypi.org/pypi/{project}/json` and `/pypi/{project}/{version}/json` supply release lists,
-filenames, sizes, upload times and **published** digests for the selectors, Inspector and Compare.
-Labelled in the UI as public metadata, not verification evidence.
+The frontend presents the backend’s original source-trace object, artifact acquisition summaries, evidence map, and verdict. Partial, missing, empty, malformed, and unavailable provenance are not promoted to success. Static source comparison does not prove reproducible builds or complete source-to-binary correspondence.
+
+## Demo mode
+
+Bundled fictional fixtures remain opt-in and are labelled. Demo source trace is not simulated; that workflow requires the live backend.

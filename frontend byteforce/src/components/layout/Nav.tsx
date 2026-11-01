@@ -99,7 +99,7 @@ function ConnectionBadge() {
         <p className="small"><strong>{label}</strong></p>
         <p className="xs muted mono break">{apiBaseUrl}/api/health{backendVersion ? ` · v${backendVersion}` : ""}</p>
         {mode === "live" && connection === "disconnected" && (
-          <p className="xs">The PyVerify API is not answering. Nothing will be verified until it is reachable. Release metadata from pypi.org still works.</p>
+          <p className="xs">The PyVerify API is not answering. Release discovery, verification, and source trace are unavailable until it is reachable.</p>
         )}
         <div className="row">
           {mode === "live" && <button type="button" className="btn btn--sm" onClick={recheck}>Retry connection</button>}

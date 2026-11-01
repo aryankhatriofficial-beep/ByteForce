@@ -263,7 +263,8 @@ export interface VersionMetadata {
   summary?: string;
   requiresPython?: string;
   license?: string;
-  requiresDist: string[];
+  /** `null` means the release-discovery route does not provide dependency metadata. */
+  requiresDist: string[] | null;
   files: ReleaseFile[];
   source: "pypi" | "demo";
 }
