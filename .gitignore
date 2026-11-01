@@ -5,6 +5,8 @@ __pycache__/
 .pytest_cache/
 .coverage
 .tox/
+node_modules/
+.pyverify-local/
 
 # Generated Python package metadata and build outputs
 *.egg-info/
@@ -14,3 +16,29 @@ dist/
 # Downloaded wheel artifacts
 *.whl
 *.tar.gz
+
+# Next.js generated files
+.next/
+out/
+.turbo/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# macOS files
+.DS_Store
+
+# Next.js generated files
+.next/
+out/
+.turbo/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# macOS files
+.DS_Store

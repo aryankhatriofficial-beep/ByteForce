@@ -1,0 +1,3 @@
+.m { padding-block: clamp(5rem, 14vw, 12rem); }
+.text { margin-top: var(--s-5); font-family: var(--font-display); font-size: clamp(1.6rem, 3.6vw, 3.6rem); font-weight: 500; font-stretch: 105%; line-height: 1.12; letter-spacing: -0.025em; max-width: 26ch; color: var(--ice); }
+.text em { font-family: var(--font-serif); font-weight: 400; color: var(--amber); }

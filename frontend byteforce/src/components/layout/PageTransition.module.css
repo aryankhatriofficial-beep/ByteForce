@@ -1,0 +1,21 @@
+.stage { position: fixed; inset: 0; z-index: 450; visibility: hidden; pointer-events: none; overflow: hidden; }
+.veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(70% 60% at 50% 50%, color-mix(in oklab, var(--uv-700) 26%, transparent), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 79px, color-mix(in oklab, var(--steel-400) 12%, transparent) 79px 80px),
+    var(--void);
+  display: grid; place-items: center;
+}
+/* Liquid-chrome leading/trailing edges ride the veil. */
+.edgeL, .edgeR { position: absolute; top: 0; bottom: 0; width: 14px; background: linear-gradient(180deg, #f4f7ff, #8d99bd 30%, #1b2442 50%, #c9d2ea 72%, #7a5cff); box-shadow: 0 0 40px 6px color-mix(in oklab, var(--uv-500) 45%, transparent); }
+.edgeL { left: -14px; } .edgeR { right: -14px; }
+.center { display: flex; flex-direction: column; align-items: center; gap: var(--s-3); width: min(640px, 86vw); }
+.spine { width: 100%; height: auto; overflow: visible; }
+.line { fill: none; stroke: var(--uv-300); stroke-width: 1.4; }
+.node { fill: var(--void); stroke: var(--ice); stroke-width: 1.6; transform-box: fill-box; transform-origin: center; }
+.labels { display: grid; grid-template-columns: repeat(6, 1fr); width: 100%; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--steel-300); text-align: center; }
+.dest { margin-top: var(--s-5); font-family: var(--font-display); font-weight: 700; font-stretch: 118%; font-size: clamp(2rem, 5vw, 3.6rem); color: var(--ice); letter-spacing: -0.03em; }
+.blurb { font-size: var(--fs-sm); color: var(--ice-dim); text-align: center; max-width: 46ch; }
+.beam { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; background: linear-gradient(90deg, transparent 46%, color-mix(in oklab, var(--uv-400) 55%, transparent) 49.4%, #fff 50%, color-mix(in oklab, var(--plasma) 50%, transparent) 50.6%, transparent 54%); mix-blend-mode: screen; }
+@media (max-width: 560px) { .labels { font-size: 11px; } }

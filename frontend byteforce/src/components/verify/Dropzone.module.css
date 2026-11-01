@@ -1,0 +1,7 @@
+.zone { position: relative; overflow: hidden; border: 1px dashed var(--line-strong); border-radius: var(--radius); transition: border-color 0.25s, background 0.25s; }
+.zone[data-over="true"] { border-color: var(--uv-400); background: color-mix(in oklab, var(--uv-600) 14%, transparent); }
+.zone:focus-within { border-color: var(--uv-400); }
+.label { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); padding: var(--s-5); text-align: center; cursor: pointer; color: var(--ice-dim); font-size: var(--fs-sm); }
+.file { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); padding: var(--s-4); }
+.file > :first-child { flex: 1 1 100%; }
+.ring { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; border: 1px solid var(--uv-300); pointer-events: none; }

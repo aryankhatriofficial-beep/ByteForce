@@ -1,0 +1,26 @@
+.layer { position: fixed; inset: 0; pointer-events: none; z-index: 400; display: none; }
+:global(html.pv-cursor) .layer { display: block; }
+:global(html:not([data-cursor-visible="true"])) .layer { opacity: 0; }
+.dot, .ring { position: fixed; left: 0; top: 0; pointer-events: none; will-change: transform; }
+.dot {
+  width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+  background: var(--ice); box-shadow: 0 0 10px 1px color-mix(in oklab, var(--uv-400) 70%, transparent);
+}
+.ring {
+  width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--silver) 45%, transparent);
+  display: grid; place-items: center;
+  transition: width var(--dur-base) var(--ease-out), height var(--dur-base) var(--ease-out), margin var(--dur-base) var(--ease-out),
+    background var(--dur-fast), border-color var(--dur-fast), opacity var(--dur-fast);
+}
+.ring[data-state="hover"] {
+  width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  border-color: var(--uv-300); background: color-mix(in oklab, var(--uv-500) 14%, transparent);
+}
+.dot[data-state="hover"] { background: var(--uv-300); }
+.ring[data-state="disabled"] { border-style: dashed; opacity: 0.6; }
+/* Text contexts: hide the custom cursor so the native I-beam is the only cursor. */
+.ring[data-state="text"], .dot[data-state="text"] { opacity: 0; }
+.ring[data-press="true"] { width: 26px; height: 26px; margin: -13px 0 0 -13px; border-color: var(--plasma); }
+.dot[data-press="true"] { transform-origin: center; background: var(--plasma); }
+.label { font-family: var(--font-body); font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--ice); white-space: nowrap; }

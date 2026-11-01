@@ -62,6 +62,47 @@ def test_get_pypi_artifact_metadata_selects_exact_filename(monkeypatch):
     }
 
 
+def test_get_pypi_release_files_returns_validated_file_metadata_without_urls(monkeypatch):
+    wheel = file_entry("demo-1.0-py3-none-any.whl", packagetype="bdist_wheel")
+    wheel.update({"upload_time_iso_8601": "2025-01-01T00:00:00Z", "python_version": "py3", "requires_python": ">=3.10"})
+    sdist = file_entry("demo-1.0.tar.gz", packagetype="sdist")
+    mock_response(monkeypatch, {
+        "info": {"summary": "Demo package", "requires_python": ">=3.10", "classifiers": ["Topic :: Utilities"]},
+        "urls": [wheel, sdist],
+    })
+
+    result = pypi.get_pypi_release_files("demo", "1.0")
+
+    assert result["project_name"] == "demo"
+    assert result["version"] == "1.0"
+    assert result["metadata"]["summary"] == "Demo package"
+    assert [item["type"] for item in result["files"]] == ["wheel", "sdist"]
+    assert result["files"][0]["filename"] == wheel["filename"]
+    assert result["files"][0]["sha256"] == SHA256
+    assert result["files"][0]["size"] == 123
+    assert result["files"][0]["upload_time"] == "2025-01-01T00:00:00Z"
+    assert result["files"][0]["python_version"] == "py3"
+    assert all("url" not in item for item in result["files"])
+
+
+@pytest.mark.parametrize("project,version", [("../demo", "1.0"), ("demo", "../1.0"), ("", "1.0")])
+def test_get_pypi_release_files_rejects_unsafe_names(monkeypatch, project, version):
+    with pytest.raises(ValueError, match="Invalid PyPI"):
+        pypi.get_pypi_release_files(project, version)
+
+
+def test_get_pypi_release_files_rejects_invalid_file_digest(monkeypatch):
+    mock_response(monkeypatch, {"urls": [file_entry("demo.whl", sha256="z" * 64)]})
+    with pytest.raises(ValueError, match="SHA256"):
+        pypi.get_pypi_release_files("demo", "1.0")
+
+
+def test_get_pypi_release_files_rejects_oversized_response(monkeypatch):
+    mock_response(monkeypatch, {"urls": [], "filler": "x" * 200})
+    with pytest.raises(ValueError, match="exceeds the configured maximum"):
+        pypi.get_pypi_release_files("demo", "1.0", max_response_size=40)
+
+
 def test_get_pypi_artifact_metadata_raises_for_missing_filename(monkeypatch):
     mock_response(monkeypatch, {"urls": [file_entry("other.whl")]})
 

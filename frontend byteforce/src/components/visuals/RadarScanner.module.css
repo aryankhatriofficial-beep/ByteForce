@@ -1,0 +1,11 @@
+.fig { margin: 0; width: 100%; max-width: 440px; aspect-ratio: 1; }
+.svg { width: 100%; height: 100%; overflow: visible; }
+.blip { --c: var(--steel-400); }
+.blip[data-status="pass"] { --c: var(--mint); }
+.blip[data-status="warn"] { --c: var(--amber); }
+.blip[data-status="fail"] { --c: var(--red); }
+.blip[data-status="unavailable"] { --c: var(--steel-300); }
+.blip[data-status="pending"] { --c: var(--uv-400); }
+.halo { fill: var(--c); opacity: 0.16; }
+.dot { fill: var(--c); }
+.text { fill: var(--silver); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
